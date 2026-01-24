@@ -34,14 +34,7 @@ const Login = () => {
     return (
         <div className="flex flex-col items-center">
             <div className="relative flex h-full min-h-screen w-full max-w-[430px] flex-col bg-background-soft overflow-x-hidden shadow-xl border-x border-border-light">
-                <div className="flex items-center bg-transparent p-4 pb-2 justify-between">
-                    <button className="p-2 text-primary" onClick={() => navigate(-1)}>
-                        <span className="material-symbols-outlined">arrow_back_ios</span>
-                    </button>
-                    <h2 className="text-text-main text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-10">
-                        Login
-                    </h2>
-                </div>
+                <div className="pt-6"></div>
                 <div className="px-6 pt-10 pb-6 flex flex-col items-center">
                     <div className="w-32 h-32 bg-primary rounded-3xl flex items-center justify-center shadow-lg shadow-primary/20">
                         <span className="material-symbols-outlined text-white text-6xl" data-icon="favorite">
