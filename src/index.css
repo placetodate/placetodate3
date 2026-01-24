@@ -1,0 +1,61 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+
+@theme {
+  --color-primary: #FF6B9D;
+  --color-secondary: #BAE6FD;
+  --color-secondary-dark: #0EA5E9;
+  --color-primary-light: #FFEDF3;
+  --color-accent-pastel: #fdf2f8;
+  --color-accent-pink: #FFF0F5;
+  --color-accent-blue: #E0F2FE;
+  --color-sky-pastel: #f0f9ff;
+  --color-background-soft: #FCFBFC;
+  --color-background-light: #FDFCFD;
+  --color-soft-white: #FDFCFD;
+  --color-text-main: #374151;
+  --color-text-soft-dark: #374151;
+  --color-text-dark: #333333;
+  --color-dark-gray: #334155;
+  --color-medium-gray: #64748b;
+  --color-text-muted: #6b7280;
+  --color-border-light: #e5e7eb;
+  --color-light-gray: #e2e8f0;
+  --font-display: "Plus Jakarta Sans", sans-serif;
+  --radius-lg: 2rem;
+  --radius-xl: 3rem;
+  --radius-full: 9999px;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.glass-effect {
+  background: rgba(252, 252, 253, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.ios-blur {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar,
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: var(--color-background-soft);
+  min-height: 100dvh;
+}
