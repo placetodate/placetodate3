@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from './firebase';
+import { doc, getDoc } from "firebase/firestore";
+import { auth, googleProvider, db } from './firebase';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -9,12 +10,27 @@ const Login = () => {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
+    const checkProfileAndRedirect = async (user) => {
+        try {
+            const docRef = doc(db, "users", user.uid);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists() && docSnap.data().isProfileComplete) {
+                navigate('/events');
+            } else {
+                navigate('/edit-profile');
+            }
+        } catch (error) {
+            console.error("Error checking profile:", error);
+            navigate('/edit-profile'); // Default to edit profile on error
+        }
+    };
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            navigate('/events');
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            await checkProfileAndRedirect(userCredential.user);
         } catch (err) {
             setError("Invalid email or password");
             console.error(err);
@@ -23,8 +39,8 @@ const Login = () => {
 
     const handleGoogleLogin = async () => {
         try {
-            await signInWithPopup(auth, googleProvider);
-            navigate('/events');
+            const result = await signInWithPopup(auth, googleProvider);
+            await checkProfileAndRedirect(result.user);
         } catch (err) {
             setError("Google sign in failed");
             console.error(err);

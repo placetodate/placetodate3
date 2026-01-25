@@ -3,11 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import BottomNav from './BottomNav';
 
 const Events = () => {
     const navigate = useNavigate();
     const [events, setEvents] = useState([]);
+    const [filteredEvents, setFilteredEvents] = useState([]);
     const [user, setUser] = useState(null);
+    const [selectedFilter, setSelectedFilter] = useState('All');
+
+    const filters = [
+        { id: 'all', label: 'All', icon: 'apps' },
+        { id: 'coffee', label: 'Coffee', icon: 'coffee' },
+        { id: 'hiking', label: 'Hiking', icon: 'hiking' },
+        { id: 'music', label: 'Music', icon: 'music_note' },
+        { id: 'dinner', label: 'Dinner', icon: 'restaurant' },
+        { id: 'drinks', label: 'Drinks', icon: 'local_bar' },
+        { id: 'art', label: 'Art', icon: 'theater_comedy' },
+    ];
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -28,6 +41,28 @@ const Events = () => {
 
         return () => unsubscribe();
     }, []);
+
+    useEffect(() => {
+        let result = [];
+        if (selectedFilter === 'All') {
+            result = [...events];
+        } else {
+            result = events.filter(event => event.type === selectedFilter);
+        }
+
+        // Sort: Joined events first
+        if (user) {
+            result.sort((a, b) => {
+                const aJoined = a.attendees && a.attendees.includes(user.uid);
+                const bJoined = b.attendees && b.attendees.includes(user.uid);
+                if (aJoined && !bJoined) return -1;
+                if (!aJoined && bJoined) return 1;
+                return 0;
+            });
+        }
+
+        setFilteredEvents(result);
+    }, [events, selectedFilter, user]);
 
     const isToday = (timestamp) => {
         if (!timestamp) return false;
@@ -76,27 +111,25 @@ const Events = () => {
             </header>
             <main className="flex-1 px-4 pt-6 space-y-6">
                 <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 -mx-4 px-4">
-                    <button className="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary px-5 transition-transform active:scale-95 shadow-sm">
-                        <p className="text-white text-sm font-semibold">Today</p>
-                    </button>
-                    <button className="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-white border border-border-light px-5 hover:bg-gray-50 transition-all">
-                        <span className="material-symbols-outlined text-sm text-text-muted">restaurant</span>
-                        <p className="text-text-main text-sm font-medium">Dining</p>
-                    </button>
-                    <button className="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-white border border-border-light px-5 hover:bg-gray-50 transition-all">
-                        <span className="material-symbols-outlined text-sm text-text-muted">local_bar</span>
-                        <p className="text-text-main text-sm font-medium">Nightlife</p>
-                    </button>
-                    <button className="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-white border border-border-light px-5 hover:bg-gray-50 transition-all">
-                        <span className="material-symbols-outlined text-sm text-text-muted">theater_comedy</span>
-                        <p className="text-text-main text-sm font-medium">Art</p>
-                    </button>
+                    {filters.map((filter) => (
+                        <button
+                            key={filter.id}
+                            onClick={() => setSelectedFilter(filter.label)}
+                            className={`flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full px-5 transition-all ${selectedFilter === filter.label
+                                ? 'bg-primary text-white shadow-sm scale-105 font-bold'
+                                : 'bg-white border border-border-light text-text-main font-medium hover:bg-gray-50'
+                                }`}
+                        >
+                            {filter.icon && <span className={`material-symbols-outlined text-sm ${selectedFilter === filter.label ? 'text-white' : 'text-text-muted'}`}>{filter.icon}</span>}
+                            <p className="text-sm">{filter.label}</p>
+                        </button>
+                    ))}
                 </div>
                 <div className="space-y-6 mb-[10px]">
-                    {events.length === 0 ? (
-                        <p className="text-text-muted text-center">No events found.</p>
+                    {filteredEvents.length === 0 ? (
+                        <p className="text-text-muted text-center pt-8">No events found for this category.</p>
                     ) : (
-                        events.map((event) => {
+                        filteredEvents.map((event) => {
                             const isJoined = user && event.attendees && event.attendees.includes(user.uid);
                             return (
                                 <div
@@ -118,11 +151,26 @@ const Events = () => {
                                                 <span className="bg-primary/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-white shadow-md">New</span>
                                             </div>
                                         )}
+                                        {user && event.createdBy === user.uid && (
+                                            <div
+                                                className="absolute top-4 left-4 z-20"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigate(`/edit-event/${event.id}`);
+                                                }}
+                                            >
+                                                <button className="bg-white/90 backdrop-blur-md size-8 flex items-center justify-center rounded-full text-primary shadow-md hover:bg-white transition-colors">
+                                                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex flex-col p-5 gap-3">
                                         <div>
                                             <p className="text-text-main text-xl font-bold leading-tight tracking-tight">{event.title}</p>
-                                            <p className="text-primary text-sm font-semibold mt-1">12 Spots left</p>
+                                            <p className="text-primary text-sm font-semibold mt-1">
+                                                {event.attendees ? event.attendees.length : 0} people joining
+                                            </p>
                                         </div>
                                         <div className="flex items-end justify-between">
                                             <div className="space-y-2">
@@ -148,24 +196,7 @@ const Events = () => {
                     )}
                 </div>
             </main>
-            <nav className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto glass-effect border-t border-border-light px-6 pb-4 pt-4 flex items-center justify-between z-50">
-                <button className="flex flex-col items-center gap-1 text-primary">
-                    <span className="material-symbols-outlined text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_today</span>
-                    <span className="text-[10px] font-bold">Events</span>
-                </button>
-                <button className="flex flex-col items-center gap-1 text-text-muted hover:text-text-main transition-colors">
-                    <span className="material-symbols-outlined text-[28px]">favorite</span>
-                    <span className="text-[10px] font-medium">Matches</span>
-                </button>
-                <button className="flex flex-col items-center gap-1 text-text-muted hover:text-text-main transition-colors">
-                    <span className="material-symbols-outlined text-[28px]">chat_bubble</span>
-                    <span className="text-[10px] font-medium">Chat</span>
-                </button>
-                <button onClick={() => navigate('/edit-profile')} className="flex flex-col items-center gap-1 text-text-muted hover:text-text-main transition-colors">
-                    <span className="material-symbols-outlined text-[28px]">account_circle</span>
-                    <span className="text-[10px] font-medium">Profile</span>
-                </button>
-            </nav>
+            <BottomNav />
         </div>
     );
 };

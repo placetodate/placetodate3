@@ -1,34 +1,71 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { storage, db } from "./firebase";
+import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
+import { storage, db, auth } from "./firebase";
 import EventMap from './EventMap';
+import BottomNav from './BottomNav';
 
 const EditEvent = () => {
     const navigate = useNavigate();
+    const { id } = useParams();
+    const isEditMode = !!id;
 
-    const [selectedEventType, setSelectedEventType] = React.useState('Coffee');
-    const [eventImage, setEventImage] = React.useState('https://lh3.googleusercontent.com/aida-public/AB6AXuB9WS9r2B6wLD0voVQ4UFtwvmx9cRI71kJG4XCF8q0fyRkt9K9KNFBdTxflBpaco9wVeqwjXIvzRGZ-W76LgACrzHpqhTx2O6nLa5tgYlYwUMao-1_yjVgsKRn0bRp9xvfGEXp5M03pzayVBQ9aRBdQ65O8xnhFb4UD_i0Tpe6v6VLeRyJW-97yqPDKCnhUNHCc8-nJvoiIWjFItFTvqga1h0S6Fy9cjL2nI_xs5yKAOl81fkZIEaW3ZAQ8_ZtKeRmt_8N9ZWg1lxM');
-    const [uploading, setUploading] = React.useState(false);
-    const [dateTime, setDateTime] = React.useState('2023-10-24T18:30');
+    const [selectedEventType, setSelectedEventType] = useState('Coffee');
+    const [eventImage, setEventImage] = useState('https://lh3.googleusercontent.com/aida-public/AB6AXuB9WS9r2B6wLD0voVQ4UFtwvmx9cRI71kJG4XCF8q0fyRkt9K9KNFBdTxflBpaco9wVeqwjXIvzRGZ-W76LgACrzHpqhTx2O6nLa5tgYlYwUMao-1_yjVgsKRn0bRp9xvfGEXp5M03pzayVBQ9aRBdQ65O8xnhFb4UD_i0Tpe6v6VLeRyJW-97yqPDKCnhUNHCc8-nJvoiIWjFItFTvqga1h0S6Fy9cjL2nI_xs5yKAOl81fkZIEaW3ZAQ8_ZtKeRmt_8N9ZWg1lxM');
+    const [uploading, setUploading] = useState(false);
+    const [dateTime, setDateTime] = useState('2023-10-24T18:30');
     const fileInputRef = React.useRef(null);
-    const [eventName, setEventName] = React.useState('');
-    const [description, setDescription] = React.useState("Let's meet at the terrace for some drinks and great conversation as the sun goes down.");
+    const [eventName, setEventName] = useState('');
+    const [description, setDescription] = useState("Let's meet at the terrace for some drinks and great conversation as the sun goes down.");
 
-    const [backgroundPosition, setBackgroundPosition] = React.useState({ x: 50, y: 50 });
-    const [isDragging, setIsDragging] = React.useState(false);
+    const [backgroundPosition, setBackgroundPosition] = useState({ x: 50, y: 50 });
+    const [isDragging, setIsDragging] = useState(false);
     const dragStartRef = React.useRef({ x: 0, y: 0 });
 
-    const [coordinates, setCoordinates] = React.useState([51.505, -0.09]); // Default to London
-    const [locationName, setLocationName] = React.useState('London, UK');
+    const [coordinates, setCoordinates] = useState([51.505, -0.09]); // Default to London
+    const [locationName, setLocationName] = useState('London, UK');
+
+    useEffect(() => {
+        if (isEditMode) {
+            fetchEventData();
+        }
+    }, [id]);
+
+    const fetchEventData = async () => {
+        try {
+            const docRef = doc(db, "events", id);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setEventName(data.title);
+                setDescription(data.description);
+                setSelectedEventType(data.type);
+                setEventImage(data.imageUrl);
+                setBackgroundPosition(data.imagePosition || { x: 50, y: 50 });
+
+                if (data.dateTime) {
+                    setDateTime(data.dateTime);
+                }
+
+                if (data.location) {
+                    setLocationName(data.location.name);
+                    setCoordinates([data.location.coordinates.lat, data.location.coordinates.lng]);
+                }
+            } else {
+                alert("Event not found!");
+                navigate('/events');
+            }
+        } catch (error) {
+            console.error("Error fetching event:", error);
+        }
+    };
 
     const fetchAddress = async (lat, lng) => {
         try {
             const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
             const data = await response.json();
             if (data && data.display_name) {
-                // Simplify address: take first 3 components or use display_name
                 const parts = data.display_name.split(', ');
                 const simpleAddress = parts.slice(0, 3).join(', ');
                 setLocationName(simpleAddress);
@@ -46,10 +83,6 @@ const EditEvent = () => {
     const handleSearch = async (query) => {
         if (!query) return;
         try {
-            // Using fetch directly since we removed leaflet-geosearch from EventMap but kept provider logic here
-            // actually simpler to just use fetch as before or import provider if needed.
-            // Let's use the fetch approach consistent with previous steps or the provider if installed.
-            // Since we installed leaflet-geosearch, let's use the fetch endpoint directly to avoid context issues or just fetch.
             const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
             const data = await response.json();
             if (data && data.length > 0) {
@@ -57,8 +90,6 @@ const EditEvent = () => {
                 const newCoords = [parseFloat(lat), parseFloat(lon)];
                 setCoordinates(newCoords);
 
-                // Update location name from search result directly or fetch fresh
-                // Using display_name often gives full address, we might want to simplify like in fetchAddress
                 const parts = display_name.split(', ');
                 const simpleAddress = parts.slice(0, 3).join(', ');
                 setLocationName(simpleAddress);
@@ -81,7 +112,7 @@ const EditEvent = () => {
             const snapshot = await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);
             setEventImage(downloadURL);
-            setBackgroundPosition({ x: 50, y: 50 }); // Reset position on new image
+            setBackgroundPosition({ x: 50, y: 50 });
         } catch (error) {
             console.error("Error uploading image: ", error);
             alert("Failed to upload image.");
@@ -106,14 +137,12 @@ const EditEvent = () => {
         const deltaX = clientX - dragStartRef.current.x;
         const deltaY = clientY - dragStartRef.current.y;
 
-        // Sensitivity factor - smaller means slower movement
         const sensitivity = 0.2;
 
         setBackgroundPosition(prev => {
             let newX = prev.x - (deltaX * sensitivity);
             let newY = prev.y - (deltaY * sensitivity);
 
-            // Clamp between 0 and 100
             newX = Math.max(0, Math.min(100, newX));
             newY = Math.max(0, Math.min(100, newY));
 
@@ -135,7 +164,7 @@ const EditEvent = () => {
 
         setUploading(true);
         try {
-            await addDoc(collection(db, "events"), {
+            const eventData = {
                 imageUrl: eventImage,
                 imagePosition: backgroundPosition,
                 title: eventName,
@@ -148,12 +177,26 @@ const EditEvent = () => {
                         lat: coordinates[0],
                         lng: coordinates[1]
                     }
-                },
-                createdAt: serverTimestamp()
-            });
-            navigate(-1); // Go back to events list
+                }
+            };
+
+            if (isEditMode) {
+                await updateDoc(doc(db, "events", id), {
+                    ...eventData,
+                    updatedAt: serverTimestamp()
+                });
+            } else {
+                const userUid = auth.currentUser ? auth.currentUser.uid : "unknown";
+                await addDoc(collection(db, "events"), {
+                    ...eventData,
+                    createdBy: userUid,
+                    attendees: [userUid],
+                    createdAt: serverTimestamp()
+                });
+            }
+            navigate('/events');
         } catch (error) {
-            console.error("Error adding document: ", error);
+            console.error("Error saving event: ", error);
             alert("Error saving event");
         } finally {
             setUploading(false);
@@ -170,17 +213,22 @@ const EditEvent = () => {
     ];
 
     return (
-        <div className="bg-background-soft min-h-screen flex justify-center font-display">
-            <div className="relative w-full max-w-[480px] min-h-screen flex flex-col bg-background-soft shadow-xl pb-20">
-                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-border-light px-4 h-16 flex items-center justify-between">
-                    <button onClick={() => navigate(-1)} className="flex items-center justify-center size-10 rounded-full hover:bg-gray-50 transition-colors">
-                        <span className="material-symbols-outlined text-text-main text-[20px]">arrow_back_ios_new</span>
+        <div className="bg-background-soft flex justify-center font-display h-screen overflow-hidden">
+            <div className="relative w-full max-w-[480px] h-full flex flex-col bg-background-soft shadow-xl">
+                {/* Header */}
+                <header className="shrink-0 z-40 w-full flex items-center bg-white/80 backdrop-blur-md p-4 justify-between border-b border-border-light">
+                    <button onClick={() => navigate(-1)} className="text-text-dark flex size-10 shrink-0 items-center justify-center bg-gray-100 rounded-full">
+                        <span className="material-symbols-outlined">arrow_back_ios_new</span>
                     </button>
-                    <h1 className="text-lg font-bold tracking-tight text-text-main">New Event</h1>
-                    <div className="size-10"></div>
+                    <h1 className="text-text-dark text-lg font-bold leading-tight tracking-tight flex-1 text-center">{isEditMode ? 'Edit Event' : 'New Event'}</h1>
+                    <div className="flex w-10 items-center justify-end">
+                        <div className="size-10"></div>
+                    </div>
                 </header>
-                <div className="flex flex-col flex-1">
-                    <div className="px-4 pt-6">
+
+                {/* Main Content - Scrolling */}
+                <div className="flex-1 overflow-y-auto px-4 pt-6 pb-6">
+                    <div className="flex flex-col">
                         <div
                             className={`relative w-full h-48 bg-gray-200 rounded-2xl overflow-hidden group border border-border-light ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                             onMouseDown={handleMouseDown}
@@ -220,119 +268,101 @@ const EditEvent = () => {
                                 />
                             </div>
                         </div>
-                    </div>
-                    <div className="flex flex-wrap items-end gap-4 px-4 py-4 pt-8">
-                        <label className="flex flex-col min-w-40 flex-1">
-                            <p className="text-sm font-bold text-primary mb-2 ml-1">Event Name</p>
-                            <input
-                                className="form-input flex w-full min-w-0 flex-1 rounded-2xl text-text-soft-dark focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-border-light bg-white h-auto py-2 placeholder:text-gray-400 px-6 pl-6 text-base font-medium"
-                                placeholder="Event Name"
-                                value={eventName}
-                                onChange={(e) => setEventName(e.target.value)}
-                            />
-                        </label>
-                    </div>
-                    <div className="flex flex-wrap items-end gap-4 px-4 py-3">
-                        <label className="flex flex-col min-w-40 flex-1">
-                            <p className="text-sm font-bold text-primary mb-2 ml-1">Description</p>
-                            <textarea
-                                className="form-input flex w-full min-w-0 flex-1 resize-none rounded-2xl text-text-soft-dark focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-border-light bg-white min-h-32 placeholder:text-gray-400 p-5 text-base font-medium"
-                                placeholder="Describe the vibe..."
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                            ></textarea>
-                        </label>
-                    </div>
-                    <div className="py-4">
-                        <p className="px-5 text-sm font-bold text-primary mb-3">Event Type</p>
-                        <div className="flex flex-wrap gap-3 px-4">
-                            {eventTypes.map((type) => (
-                                <button
-                                    key={type.id}
-                                    onClick={() => setSelectedEventType(type.label)}
-                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full whitespace-nowrap font-medium text-sm transition-all border ${selectedEventType === type.label
-                                        ? 'bg-primary text-white border-primary shadow-sm'
-                                        : 'bg-white border-border-light text-text-soft-dark hover:bg-gray-50'
-                                        }`}
-                                >
-                                    <span className="material-symbols-outlined text-sm">{type.icon}</span>
-                                    {type.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="px-4 py-4">
-                        <p className="text-sm font-bold text-primary mb-3 ml-1">When</p>
-                        <div className="bg-white border border-border-light rounded-2xl p-4 flex items-center gap-3">
-                            <span className="material-symbols-outlined text-primary">calendar_month</span>
-                            <div className="flex-1">
-                                <p className="text-[10px] uppercase font-bold text-gray-400">Date & Time</p>
+
+                        <div className="flex flex-wrap items-end gap-4 py-4 pt-8">
+                            <label className="flex flex-col min-w-40 flex-1">
+                                <p className="text-sm font-bold text-primary mb-2 ml-1">Event Name</p>
                                 <input
-                                    type="datetime-local"
-                                    value={dateTime}
-                                    onChange={(e) => setDateTime(e.target.value)}
-                                    className="w-full text-sm font-semibold text-text-soft-dark border-none p-0 focus:ring-0"
+                                    className="form-input flex w-full min-w-0 flex-1 rounded-2xl text-text-soft-dark focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-border-light bg-white h-auto py-2 placeholder:text-gray-400 px-6 pl-6 text-base font-medium"
+                                    placeholder="Event Name"
+                                    value={eventName}
+                                    onChange={(e) => setEventName(e.target.value)}
                                 />
+                            </label>
+                        </div>
+                        <div className="flex flex-wrap items-end gap-4 py-3">
+                            <label className="flex flex-col min-w-40 flex-1">
+                                <p className="text-sm font-bold text-primary mb-2 ml-1">Description</p>
+                                <textarea
+                                    className="form-input flex w-full min-w-0 flex-1 resize-none rounded-2xl text-text-soft-dark focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-border-light bg-white min-h-32 placeholder:text-gray-400 p-5 text-base font-medium"
+                                    placeholder="Describe the vibe..."
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                ></textarea>
+                            </label>
+                        </div>
+                        <div className="py-4">
+                            <p className="px-1 text-sm font-bold text-primary mb-3">Event Type</p>
+                            <div className="flex flex-wrap gap-3">
+                                {eventTypes.map((type) => (
+                                    <button
+                                        key={type.id}
+                                        onClick={() => setSelectedEventType(type.label)}
+                                        className={`flex items-center gap-2 px-5 py-2.5 rounded-full whitespace-nowrap font-medium text-sm transition-all border ${selectedEventType === type.label
+                                            ? 'bg-primary text-white border-primary shadow-sm'
+                                            : 'bg-white border-border-light text-text-soft-dark hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        <span className="material-symbols-outlined text-sm">{type.icon}</span>
+                                        {type.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                    </div>
-                    <div className="flex items-center justify-between px-4 pt-4">
-                        <h3 className="text-sm font-bold text-primary ml-1">Location</h3>
-                        <span className="text-xs font-medium text-gray-400 max-w-[200px] truncate">{locationName}</span>
-                    </div>
-                    <div className="px-4 py-3 relative">
-                        <EventMap
-                            coordinates={coordinates}
-                            onLocationSelect={handleLocationUpdate}
-                            address={locationName}
-                            onSearch={handleSearch}
-                        />
-                        <button
-                            className="absolute bottom-6 right-8 bg-white size-12 flex items-center justify-center rounded-full shadow-lg border border-border-light text-primary z-[400] hover:scale-105 transition-transform"
-                            onClick={() => {
-                                if (navigator.geolocation) {
-                                    navigator.geolocation.getCurrentPosition((position) => {
-                                        handleLocationUpdate([position.coords.latitude, position.coords.longitude]);
-                                    });
-                                }
-                            }}
-                        >
-                            <span className="material-symbols-outlined text-xl">my_location</span>
-                        </button>
-                    </div>
-                    <div className="px-4 py-8 mb-4">
-                        <button
-                            onClick={handleSubmit}
-                            disabled={uploading}
-                            className="w-full bg-primary text-white py-5 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-3 active:scale-95 transition-transform disabled:opacity-70"
-                        >
-                            {uploading ? 'Saving...' : 'Update Event Details'}
-                        </button>
-                    </div>
-                </div>
-                <div className="fixed bottom-0 w-full max-w-[480px] z-50 ios-blur bg-white/90 border-t border-border-light pt-3 pb-3">
-                    <div className="flex items-center justify-around px-4">
-                        <button className="flex flex-col items-center gap-1 text-primary">
-                            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>event</span>
-                            <span className="text-[10px] font-bold">Events</span>
-                        </button>
-                        <button className="flex flex-col items-center gap-1 text-gray-400">
-                            <span className="material-symbols-outlined">favorite</span>
-                            <span className="text-[10px] font-bold">Matches</span>
-                        </button>
-                        <button className="flex flex-col items-center gap-1 text-gray-400">
-                            <span className="material-symbols-outlined">chat_bubble</span>
-                            <span className="text-[10px] font-bold">Chat</span>
-                        </button>
-                        <button onClick={() => navigate('/edit-profile')} className="flex flex-col items-center gap-1 text-gray-400">
-                            <span className="material-symbols-outlined">person</span>
-                            <span className="text-[10px] font-bold">Profile</span>
-                        </button>
-                    </div>
-                    <div className="w-full flex justify-center mt-4">
-                        <div className="w-32 h-1.5 bg-gray-200 rounded-full"></div>
+                        <div className="py-4">
+                            <p className="text-sm font-bold text-primary mb-3 ml-1">When</p>
+                            <div className="bg-white border border-border-light rounded-2xl p-4 flex items-center gap-3">
+                                <span className="material-symbols-outlined text-primary">calendar_month</span>
+                                <div className="flex-1">
+                                    <p className="text-[10px] uppercase font-bold text-gray-400">Date & Time</p>
+                                    <input
+                                        type="datetime-local"
+                                        value={dateTime}
+                                        onChange={(e) => setDateTime(e.target.value)}
+                                        className="w-full text-sm font-semibold text-text-soft-dark border-none p-0 focus:ring-0"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between pt-4">
+                            <h3 className="text-sm font-bold text-primary ml-1">Location</h3>
+                            <span className="text-xs font-medium text-gray-400 max-w-[200px] truncate">{locationName}</span>
+                        </div>
+                        <div className="py-3 relative">
+                            <EventMap
+                                coordinates={coordinates}
+                                onLocationSelect={handleLocationUpdate}
+                                address={locationName}
+                                onSearch={handleSearch}
+                            />
+                            <button
+                                className="absolute bottom-6 right-4 bg-white size-12 flex items-center justify-center rounded-full shadow-lg border border-border-light text-primary z-[400] hover:scale-105 transition-transform"
+                                onClick={() => {
+                                    if (navigator.geolocation) {
+                                        navigator.geolocation.getCurrentPosition((position) => {
+                                            handleLocationUpdate([position.coords.latitude, position.coords.longitude]);
+                                        });
+                                    }
+                                }}
+                            >
+                                <span className="material-symbols-outlined text-xl">my_location</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                {/* Footer - Updated/Save Button - Sticky/Static */}
+                <div className="shrink-0 max-w-[480px] mx-auto w-full px-4 pt-3 pb-3 bg-white border-t border-border-light z-20">
+                    <button
+                        onClick={handleSubmit}
+                        disabled={uploading}
+                        className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-3 active:scale-95 transition-transform disabled:opacity-70"
+                    >
+                        {uploading ? 'Saving...' : 'Update Event Details'}
+                    </button>
+                </div>
+
+                {/* Bottom Nav Removed as requested */}
             </div>
         </div>
     );
