@@ -310,7 +310,7 @@ const EditEvent = () => {
                         </button>
                     </div>
                 </div>
-                <div className="fixed bottom-0 w-full max-w-[480px] z-50 ios-blur bg-white/90 border-t border-border-light pt-3 pb-6">
+                <div className="fixed bottom-0 w-full max-w-[480px] z-50 ios-blur bg-white/90 border-t border-border-light pt-3 pb-3">
                     <div className="flex items-center justify-around px-4">
                         <button className="flex flex-col items-center gap-1 text-primary">
                             <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>event</span>

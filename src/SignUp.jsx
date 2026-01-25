@@ -45,9 +45,7 @@ const SignUp = () => {
                 </h2>
             </div>
             <div className="flex flex-col items-center px-6 pt-6 pb-2 z-10">
-                <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-6 shadow-md shadow-primary/20">
-                    <span className="material-symbols-outlined text-white text-4xl fill-1">favorite</span>
-                </div>
+
                 <h1 className="text-text-main tracking-tight text-[30px] font-bold leading-tight text-center pb-2 font-display">
                     Start your journey
                 </h1>
@@ -108,19 +106,17 @@ const SignUp = () => {
                         </span>
                     </div>
                 </div>
-                <div className="flex flex-col px-5 pt-4 pb-8 gap-4 mt-auto z-10">
+                <div className="flex flex-col px-5 pt-4 pb-4 gap-4 mt-auto z-10">
                     <button className="bg-primary text-white text-base font-bold h-14 rounded-full w-full shadow-lg shadow-primary/25 active:scale-[0.98] transition-all">
                         Create Account
                     </button>
-                    <p className="text-text-muted text-[11px] text-center px-8 leading-relaxed">
-                        By signing up, you agree to our <span className="text-primary font-bold cursor-pointer">Terms of Service</span> and <span className="text-primary font-bold cursor-pointer">Privacy Policy</span>.
-                    </p>
                     <div className="flex justify-center items-center gap-2 mt-4">
                         <span className="text-text-muted text-sm">Already have an account?</span>
                         <Link to="/login" className="text-primary text-sm font-bold">
                             Log In
                         </Link>
                     </div>
+
                 </div>
             </form>
             <div className="h-8 w-full flex justify-center items-center">

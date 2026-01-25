@@ -114,7 +114,7 @@ const EditProfile = () => {
                         </div>
                     </section>
                 </main>
-                <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto p-6 bg-gradient-to-t from-soft-white via-soft-white/95 to-transparent z-10">
+                <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto px-6 py-3 bg-gradient-to-t from-soft-white via-soft-white/95 to-transparent z-10">
                     <button onClick={() => navigate('/events')} className="w-full bg-primary hover:brightness-105 active:scale-[0.98] text-white font-bold h-14 rounded-2xl shadow-xl shadow-primary/30 transition-all flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined">check_circle</span>
                         Save Profile

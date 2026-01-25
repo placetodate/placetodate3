@@ -35,16 +35,10 @@ const Login = () => {
         <div className="flex flex-col items-center">
             <div className="relative flex h-full min-h-screen w-full max-w-[430px] flex-col bg-background-soft overflow-x-hidden shadow-xl border-x border-border-light">
                 <div className="pt-6"></div>
-                <div className="px-6 pt-10 pb-6 flex flex-col items-center">
-                    <div className="w-32 h-32 bg-primary rounded-3xl flex items-center justify-center shadow-lg shadow-primary/20">
-                        <span className="material-symbols-outlined text-white text-6xl" data-icon="favorite">
-                            favorite
-                        </span>
-                    </div>
-                </div>
+
                 <div className="px-6 text-center">
                     <h1 className="text-text-main tracking-tight text-[32px] font-bold leading-tight">
-                        placeToDate
+                        Place to Date
                     </h1>
                     <p className="text-text-muted text-base font-normal leading-normal pb-8 pt-2">
                         Your next date is one event away.
@@ -127,7 +121,7 @@ const Login = () => {
                         Continue with Google
                     </button>
                 </div>
-                <div className="mt-auto pb-10 pt-10 px-6 text-center">
+                <div className="mt-auto pb-4 pt-4 px-6 text-center">
                     <p className="text-text-muted font-medium">
                         Don't have an account?{' '}
                         <Link className="text-primary font-bold hover:underline" to="/signup">
