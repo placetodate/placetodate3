@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, setDoc, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -15,6 +15,7 @@ const ProfileView = () => {
     const [isMatch, setIsMatch] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [joinedEvents, setJoinedEvents] = useState([]);
+    const [showMatchAnimation, setShowMatchAnimation] = useState(false);
 
     useEffect(() => {
         const fetchJoinedEvents = async () => {
@@ -122,11 +123,26 @@ const ProfileView = () => {
                 const reverseLikeSnap = await getDoc(reverseLikeDocRef);
                 if (reverseLikeSnap.exists()) {
                     setIsMatch(true);
-                    alert("It's a Match!");
+                    setShowMatchAnimation(true);
+                    // alert("It's a Match!");
                 }
             }
         } catch (error) {
             console.error("Error liking user:", error);
+        }
+    };
+
+    const handleUnmatch = async () => {
+        if (!currentUser || !uid) return;
+
+        try {
+            const likeDocId = `${currentUser.uid}_${uid}`;
+            await deleteDoc(doc(db, "likes", likeDocId));
+
+            setIsMatch(false);
+            setIsLiked(false);
+        } catch (error) {
+            console.error("Error unmatching:", error);
         }
     };
 
@@ -186,7 +202,7 @@ const ProfileView = () => {
                             <div className="absolute top-4 left-4 z-20">
                                 <div className="flex items-center gap-2 bg-primary/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg border border-white/20">
                                     <span className="material-symbols-outlined text-white text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>celebration</span>
-                                    <span className="text-white text-[10px] font-bold uppercase tracking-wider">3 Shared Events</span>
+                                    <span className="text-white text-[10px] font-bold uppercase tracking-wider">{joinedEvents.length} Shared Event{joinedEvents.length !== 1 ? 's' : ''}</span>
                                 </div>
                             </div>
                             <div className="flex justify-center gap-2 p-5 z-20">
@@ -263,13 +279,21 @@ const ProfileView = () => {
                 {/* Footer - Sticky Button */}
                 <div className="shrink-0 w-full p-4 bg-white border-t border-border-light z-50">
                     {isMatch ? (
-                        <button
-                            onClick={() => navigate(`/chat/${profile.id}`)}
-                            className="w-full flex h-14 items-center justify-center rounded-2xl bg-primary text-white font-bold text-lg shadow-lg hover:brightness-105 active:scale-[0.98] transition-all gap-2"
-                        >
-                            <span className="material-symbols-outlined text-2xl">chat</span>
-                            Chat
-                        </button>
+                        <div className="flex gap-3 w-full">
+                            <button
+                                onClick={() => navigate(`/chat/${profile.id}`)}
+                                className="flex-1 flex h-14 items-center justify-center rounded-2xl bg-primary text-white font-bold text-lg shadow-lg hover:brightness-105 active:scale-[0.98] transition-all gap-2"
+                            >
+                                <span className="material-symbols-outlined text-2xl">chat</span>
+                                Chat
+                            </button>
+                            <button
+                                onClick={handleUnmatch}
+                                className="size-14 flex shrink-0 items-center justify-center rounded-2xl bg-red-50 text-red-500 border-2 border-red-100 font-bold shadow-md hover:bg-red-100 active:scale-[0.98] transition-all"
+                            >
+                                <span className="material-symbols-outlined text-2xl filled-icon">heart_broken</span>
+                            </button>
+                        </div>
                     ) : (
                         <button
                             onClick={handleLike}
@@ -282,7 +306,35 @@ const ProfileView = () => {
                     )}
                 </div>
             </div>
-        </div>
+
+
+            {showMatchAnimation && (
+                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
+                    <h2 className="text-white text-5xl font-bold mb-8 animate-bounce font-display tracking-tight text-center">It's a Match!</h2>
+                    <div className="flex items-center gap-6 mb-10">
+                        <div className="size-24 rounded-full bg-cover bg-center border-4 border-white shadow-2xl" style={{ backgroundImage: `url('${currentUserProfile?.images?.[0] || 'https://via.placeholder.com/150'}')` }}></div>
+                        <div className="size-16 bg-white rounded-full flex items-center justify-center animate-pulse shadow-xl">
+                            <span className="material-symbols-outlined text-4xl text-primary filled-icon">favorite</span>
+                        </div>
+                        <div className="size-24 rounded-full bg-cover bg-center border-4 border-white shadow-2xl" style={{ backgroundImage: `url('${profile.images?.[0] || 'https://via.placeholder.com/150'}')` }}></div>
+                    </div>
+                    <div className="flex flex-col gap-3 w-64">
+                        <button
+                            onClick={() => { setShowMatchAnimation(false); navigate(`/chat/${profile.id}`); }}
+                            className="w-full bg-primary text-white py-4 rounded-full font-bold shadow-lg hover:scale-105 transition-transform flex items-center justify-center gap-2"
+                        >
+                            <span className="material-symbols-outlined">chat_bubble</span> Say Hello
+                        </button>
+                        <button
+                            onClick={() => setShowMatchAnimation(false)}
+                            className="w-full bg-white/10 text-white py-3 rounded-full font-bold hover:bg-white/20 transition-colors"
+                        >
+                            Keep Exploring
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div >
     );
 };
 

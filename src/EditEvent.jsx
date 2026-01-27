@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, deleteDoc, Timestamp } from "firebase/firestore";
 import { storage, db, auth } from "./firebase";
 import EventMap from './EventMap';
+import { resizeImage } from './utils/imageUtils';
 import BottomNav from './BottomNav';
 
 const EditEvent = () => {
@@ -25,6 +26,16 @@ const EditEvent = () => {
 
     const [coordinates, setCoordinates] = useState([51.505, -0.09]); // Default to London
     const [locationName, setLocationName] = useState('London, UK');
+    const [error, setError] = useState('');
+    const [errors, setErrors] = useState({});
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    useEffect(() => {
+        if (error) {
+            const timer = setTimeout(() => setError(''), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [error]);
 
     useEffect(() => {
         if (isEditMode) {
@@ -53,8 +64,8 @@ const EditEvent = () => {
                     setCoordinates([data.location.coordinates.lat, data.location.coordinates.lng]);
                 }
             } else {
-                alert("Event not found!");
-                navigate('/events');
+                setError("Event not found!");
+                // navigate('/events'); // Stay on page to show error or direct to events? User wants error message on screen.
             }
         } catch (error) {
             console.error("Error fetching event:", error);
@@ -94,11 +105,11 @@ const EditEvent = () => {
                 const simpleAddress = parts.slice(0, 3).join(', ');
                 setLocationName(simpleAddress);
             } else {
-                alert('Location not found');
+                setError('Location not found');
             }
         } catch (error) {
             console.error("Error searching location:", error);
-            alert('Error searching location');
+            setError('Error searching location');
         }
     };
 
@@ -108,14 +119,17 @@ const EditEvent = () => {
 
         setUploading(true);
         try {
+            const resizedDataUrl = await resizeImage(file);
+            const blob = await (await fetch(resizedDataUrl)).blob();
+
             const storageRef = ref(storage, `events/${Date.now()}_${file.name}`);
-            const snapshot = await uploadBytes(storageRef, file);
+            const snapshot = await uploadBytes(storageRef, blob);
             const downloadURL = await getDownloadURL(snapshot.ref);
             setEventImage(downloadURL);
             setBackgroundPosition({ x: 50, y: 50 });
         } catch (error) {
             console.error("Error uploading image: ", error);
-            alert("Failed to upload image.");
+            setError("Failed to upload image.");
         } finally {
             setUploading(false);
         }
@@ -156,11 +170,38 @@ const EditEvent = () => {
         setIsDragging(false);
     };
 
+    const validate = () => {
+        const newErrors = {};
+        if (!eventName.trim()) newErrors.eventName = "Event Name is required";
+        if (!description.trim()) newErrors.description = "Description is required";
+        if (!dateTime) newErrors.dateTime = "Date and time are required";
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleDelete = () => {
+        setShowDeleteModal(true);
+    };
+
+    const confirmDelete = async () => {
+        setUploading(true);
+        try {
+            await deleteDoc(doc(db, "events", id));
+            navigate('/events');
+        } catch (error) {
+            console.error("Error deleting event:", error);
+            setError("Error deleting event");
+            setUploading(false);
+            setShowDeleteModal(false);
+        }
+    };
+
     const handleSubmit = async () => {
-        if (!eventName) {
-            alert("Please enter an event name");
+        if (!validate()) {
             return;
         }
+
+        // ... (rest of handleSubmit logic remains same, just ensuring handleDelete is placed before or after)
 
         setUploading(true);
         try {
@@ -197,7 +238,7 @@ const EditEvent = () => {
             navigate('/events');
         } catch (error) {
             console.error("Error saving event: ", error);
-            alert("Error saving event");
+            setError("Error saving event");
         } finally {
             setUploading(false);
         }
@@ -228,9 +269,15 @@ const EditEvent = () => {
 
                 {/* Main Content - Scrolling */}
                 <div className="flex-1 overflow-y-auto px-4 pt-6 pb-6">
+                    {error && (
+                        <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl flex items-center gap-2 animate-pulse">
+                            <span className="material-symbols-outlined text-xl">error</span>
+                            <span className="text-sm font-bold">{error}</span>
+                        </div>
+                    )}
                     <div className="flex flex-col">
                         <div
-                            className={`relative w-full h-48 bg-gray-200 rounded-2xl overflow-hidden group border border-border-light ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                            className={`relative w-full h-48 bg-gray-200 rounded-2xl overflow-hidden group border border-border-light touch-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                             onMouseDown={handleMouseDown}
                             onMouseMove={handleMouseMove}
                             onMouseUp={handleMouseUp}
@@ -269,26 +316,48 @@ const EditEvent = () => {
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-end gap-4 py-4 pt-8">
-                            <label className="flex flex-col min-w-40 flex-1">
-                                <p className="text-sm font-bold text-primary mb-2 ml-1">Event Name</p>
-                                <input
-                                    className="form-input flex w-full min-w-0 flex-1 rounded-2xl text-text-soft-dark focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-border-light bg-white h-auto py-2 placeholder:text-gray-400 px-6 pl-6 text-base font-medium"
-                                    placeholder="Event Name"
-                                    value={eventName}
-                                    onChange={(e) => setEventName(e.target.value)}
-                                />
-                            </label>
+                        <div className="space-y-2 pt-4">
+                            <label className="text-sm font-bold text-primary ml-1">Event Name</label>
+                            <input
+                                className={`form-input flex w-full min-w-0 flex-1 rounded-2xl text-text-soft-dark focus:outline-0 focus:ring-2 focus:ring-primary/20 bg-white h-14 placeholder:text-gray-400 px-4 text-base font-medium ${errors.eventName ? 'border-2 border-red-600 focus:ring-red-600/20' : 'border border-border-light'}`}
+                                placeholder="Event Name"
+                                value={eventName}
+                                onChange={(e) => {
+                                    setEventName(e.target.value);
+                                    if (!e.target.value.trim()) {
+                                        setErrors(prev => ({ ...prev, eventName: "Event Name is required" }));
+                                    } else {
+                                        setErrors(prev => {
+                                            const newErrors = { ...prev };
+                                            delete newErrors.eventName;
+                                            return newErrors;
+                                        });
+                                    }
+                                }}
+                            />
+                            {errors.eventName && <p className="text-xs text-red-600 mt-1 ml-1 font-medium">{errors.eventName}</p>}
                         </div>
                         <div className="flex flex-wrap items-end gap-4 py-3">
                             <label className="flex flex-col min-w-40 flex-1">
                                 <p className="text-sm font-bold text-primary mb-2 ml-1">Description</p>
                                 <textarea
-                                    className="form-input flex w-full min-w-0 flex-1 resize-none rounded-2xl text-text-soft-dark focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-border-light bg-white min-h-32 placeholder:text-gray-400 p-5 text-base font-medium"
+                                    className={`form-input flex w-full min-w-0 flex-1 resize-none rounded-2xl text-text-soft-dark focus:outline-0 focus:ring-2 focus:ring-primary/20 bg-white min-h-32 placeholder:text-gray-400 p-4 text-base font-medium ${errors.description ? 'border-2 border-red-600 focus:ring-red-600/20' : 'border border-border-light'}`}
                                     placeholder="Describe the vibe..."
                                     value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
+                                    onChange={(e) => {
+                                        setDescription(e.target.value);
+                                        if (!e.target.value.trim()) {
+                                            setErrors(prev => ({ ...prev, description: "Description is required" }));
+                                        } else {
+                                            setErrors(prev => {
+                                                const newErrors = { ...prev };
+                                                delete newErrors.description;
+                                                return newErrors;
+                                            });
+                                        }
+                                    }}
                                 ></textarea>
+                                {errors.description && <p className="text-xs text-red-600 mt-1 ml-1 font-medium">{errors.description}</p>}
                             </label>
                         </div>
                         <div className="py-4">
@@ -310,19 +379,31 @@ const EditEvent = () => {
                             </div>
                         </div>
                         <div className="py-4">
-                            <p className="text-sm font-bold text-primary mb-3 ml-1">When</p>
-                            <div className="bg-white border border-border-light rounded-2xl p-4 flex items-center gap-3">
+                            <p className="px-1 text-sm font-bold text-primary mb-3">When</p>
+                            <div className={`bg-white border rounded-2xl p-4 flex items-center gap-3 ${errors.dateTime ? 'border-2 border-red-600' : 'border-border-light'}`}>
                                 <span className="material-symbols-outlined text-primary">calendar_month</span>
                                 <div className="flex-1">
                                     <p className="text-[10px] uppercase font-bold text-gray-400">Date & Time</p>
                                     <input
                                         type="datetime-local"
                                         value={dateTime}
-                                        onChange={(e) => setDateTime(e.target.value)}
+                                        onChange={(e) => {
+                                            setDateTime(e.target.value);
+                                            if (!e.target.value) {
+                                                setErrors(prev => ({ ...prev, dateTime: "Date and time are required" }));
+                                            } else {
+                                                setErrors(prev => {
+                                                    const newErrors = { ...prev };
+                                                    delete newErrors.dateTime;
+                                                    return newErrors;
+                                                });
+                                            }
+                                        }}
                                         className="w-full text-sm font-semibold text-text-soft-dark border-none p-0 focus:ring-0"
                                     />
                                 </div>
                             </div>
+                            {errors.dateTime && <p className="text-xs text-red-600 mt-1 ml-1 font-medium">{errors.dateTime}</p>}
                         </div>
                         <div className="flex items-center justify-between pt-4">
                             <h3 className="text-sm font-bold text-primary ml-1">Location</h3>
@@ -352,17 +433,58 @@ const EditEvent = () => {
                 </div>
 
                 {/* Footer - Updated/Save Button - Sticky/Static */}
-                <div className="shrink-0 max-w-[480px] mx-auto w-full px-4 pt-3 pb-3 bg-white border-t border-border-light z-20">
+                <div className="shrink-0 max-w-[480px] mx-auto w-full px-4 pt-3 pb-3 bg-white border-t border-border-light z-20 flex flex-col gap-3">
                     <button
                         onClick={handleSubmit}
-                        disabled={uploading}
-                        className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-3 active:scale-95 transition-transform disabled:opacity-70"
+                        disabled={uploading || Object.keys(errors).length > 0}
+                        className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-3 active:scale-95 transition-transform disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                        {uploading ? 'Saving...' : 'Update Event Details'}
+                        {uploading ? 'Saving...' : (isEditMode ? 'Update Event Details' : 'Create Event')}
                     </button>
+
+                    {isEditMode && (
+                        <button
+                            onClick={handleDelete}
+                            disabled={uploading}
+                            className="w-full bg-red-50 text-red-500 py-3 rounded-2xl font-bold text-lg border-2 border-red-100 flex items-center justify-center gap-3 active:scale-95 transition-transform hover:bg-red-100"
+                        >
+                            Delete Event
+                        </button>
+                    )}
                 </div>
 
-                {/* Bottom Nav Removed as requested */}
+                {/* Delete Confirmation Modal */}
+                {showDeleteModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setShowDeleteModal(false)}></div>
+                        <div className="relative bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100 transition-transform">
+                            <div className="flex flex-col items-center text-center gap-4">
+                                <div className="size-16 rounded-full bg-red-50 flex items-center justify-center mb-2">
+                                    <span className="material-symbols-outlined text-3xl text-red-500">delete_forever</span>
+                                </div>
+                                <h3 className="text-xl font-bold text-text-dark">Delete Event?</h3>
+                                <p className="text-text-muted leading-relaxed">
+                                    Are you sure you want to delete this event? This action cannot be undone.
+                                </p>
+                                <div className="grid grid-cols-2 gap-3 w-full mt-2">
+                                    <button
+                                        onClick={() => setShowDeleteModal(false)}
+                                        className="py-3 rounded-2xl font-bold text-text-dark bg-gray-100 hover:bg-gray-200 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={confirmDelete}
+                                        disabled={uploading}
+                                        className="py-3 rounded-2xl font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all active:scale-95 disabled:opacity-70 disabled:active:scale-100"
+                                    >
+                                        {uploading ? 'Deleting...' : 'Delete'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

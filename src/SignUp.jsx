@@ -23,7 +23,7 @@ const SignUp = () => {
             await createUserWithEmailAndPassword(auth, email, password);
             // In a real app we might want to update the profile with displayName here
             // await updateProfile(auth.currentUser, { displayName: fullName });
-            navigate('/edit-profile');
+            navigate('/edit-profile', { state: { hideBackButton: true } });
         } catch (err) {
             setError(err.message);
             console.error(err);

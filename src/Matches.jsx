@@ -186,18 +186,7 @@ const Matches = () => {
                                     </div>
                                 ))}
 
-                                {/* Upgrade Teaser - Only show if we have some likes to look busy, or always at end? Let's keep it conditional or just static for the "vibe" */}
-                                <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm border border-border-light group cursor-pointer hover:shadow-md transition-shadow">
-                                    <div className="bg-cover bg-center flex flex-col justify-center items-center aspect-[3/4] opacity-50 grayscale blur-sm" style={{ backgroundImage: 'linear-gradient(45deg, #ff79c6 0%, #e3f2fd 100%)' }}>
-                                    </div>
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-                                        <div className="bg-white/90 p-3 rounded-full shadow-lg mb-2">
-                                            <span className="material-symbols-outlined text-primary text-2xl filled-icon">lock</span>
-                                        </div>
-                                        <p className="text-text-dark text-xs font-bold font-display uppercase tracking-widest">Upgrade to see</p>
-                                        <p className="text-text-muted text-[10px] mt-1">more likes</p>
-                                    </div>
-                                </div>
+
                             </div>
                         )}
                     </section>

@@ -17,11 +17,11 @@ const Login = () => {
             if (docSnap.exists() && docSnap.data().isProfileComplete) {
                 navigate('/events');
             } else {
-                navigate('/edit-profile');
+                navigate('/edit-profile', { state: { hideBackButton: true } });
             }
         } catch (error) {
             console.error("Error checking profile:", error);
-            navigate('/edit-profile'); // Default to edit profile on error
+            navigate('/edit-profile', { state: { hideBackButton: true } }); // Default to edit profile on error
         }
     };
 

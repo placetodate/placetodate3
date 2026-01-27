@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import BottomNav from './BottomNav';
@@ -95,6 +95,20 @@ const EventDetails = () => {
         }
     };
 
+    const handleLeaveEvent = async () => {
+        if (!user) return;
+
+        try {
+            const docRef = doc(db, "events", id);
+            await updateDoc(docRef, {
+                attendees: arrayRemove(user.uid)
+            });
+            setHasJoined(false);
+        } catch (error) {
+            console.error("Error leaving event:", error);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex h-screen items-center justify-center bg-background-light">
@@ -178,7 +192,6 @@ const EventDetails = () => {
                             <div className="py-2">
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-text-dark text-xl font-bold">Who's Joining</h3>
-                                    <span className="text-primary text-sm font-bold">{event.attendees ? event.attendees.length : 0} Attending</span>
                                 </div>
                                 <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-4 px-4 pb-4">
                                     {attendeesData.map((attendee) => {
@@ -220,8 +233,17 @@ const EventDetails = () => {
                 </div>
 
                 {/* Footer Join Button - Sticky */}
-                {!hasJoined && (
-                    <div className="shrink-0 w-full pt-4 pb-4 px-6 bg-background-light border-t border-border-light z-20 mb-[85px]">
+                {/* Footer Join/Leave Button - Sticky */}
+                <div className="shrink-0 w-full pt-4 pb-4 px-6 bg-background-light border-t border-border-light z-20 mb-[85px]">
+                    {hasJoined ? (
+                        <button
+                            onClick={handleLeaveEvent}
+                            className="w-full h-14 bg-red-50 text-red-500 border-2 border-red-100 hover:bg-red-100 text-lg font-extrabold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
+                        >
+                            <span className="material-symbols-outlined">cancel</span>
+                            Leave Event
+                        </button>
+                    ) : (
                         <button
                             onClick={handleJoinEvent}
                             className="w-full h-14 bg-primary hover:bg-primary/90 text-white text-lg font-extrabold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
@@ -229,13 +251,13 @@ const EventDetails = () => {
                             <span className="material-symbols-outlined">confirmation_number</span>
                             Join Event
                         </button>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* Bottom Nav - Sticky */}
                 <BottomNav />
             </div>
-        </div>
+        </div >
     );
 };
 
