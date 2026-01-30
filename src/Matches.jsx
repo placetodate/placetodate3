@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getAvatar, getAvatarUrl } from './utils/avatarUtils';
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -140,18 +141,24 @@ const Matches = () => {
                                 <p className="text-text-muted text-sm italic w-full text-center pt-4">No matches yet. Keep exploring!</p>
                             ) : (
                                 <div className="flex min-h-min flex-row items-start justify-start gap-5">
-                                    {matches.map(({ uid, profile }) => (
-                                        <div key={uid} onClick={() => navigate(`/chat/${uid}`)} className="flex flex-col items-center gap-2 w-20 group cursor-pointer hover:scale-105 transition-transform">
-                                            <div className="relative p-1 rounded-full border-2 border-primary">
-                                                <div className="w-16 h-16 bg-center bg-no-repeat bg-cover rounded-full shadow-sm" style={{ backgroundImage: `url('${profile.images && profile.images[0] ? profile.images[0] : 'https://via.placeholder.com/150'}')` }}>
+                                    {matches.map(({ uid, profile }) => {
+                                        const imageUrl = profile.isAvatarMode
+                                            ? (profile.avatarId ? getAvatarUrl(profile.avatarId) : getAvatar(uid))
+                                            : (profile.images && profile.images.find(img => img) ? profile.images.find(img => img) : 'https://via.placeholder.com/150');
+
+                                        return (
+                                            <div key={uid} onClick={() => navigate(`/chat/${uid}`)} className="flex flex-col items-center gap-2 w-20 group cursor-pointer hover:scale-105 transition-transform">
+                                                <div className="relative p-1 rounded-full border-2 border-primary">
+                                                    <div className="w-16 h-16 bg-center bg-no-repeat bg-cover rounded-full shadow-sm" style={{ backgroundImage: `url('${imageUrl}')`, backgroundColor: profile.isAvatarMode ? '#fff' : 'transparent' }}>
+                                                    </div>
+                                                    <div className="absolute bottom-0 right-0 bg-primary text-white p-1 rounded-full border-2 border-soft-white flex items-center justify-center">
+                                                        <span className="material-symbols-outlined text-[12px] filled-icon">bolt</span>
+                                                    </div>
                                                 </div>
-                                                <div className="absolute bottom-0 right-0 bg-primary text-white p-1 rounded-full border-2 border-soft-white flex items-center justify-center">
-                                                    <span className="material-symbols-outlined text-[12px] filled-icon">bolt</span>
-                                                </div>
+                                                <p className="text-text-dark text-[13px] font-semibold leading-normal font-display truncate w-full text-center">{profile.name}</p>
                                             </div>
-                                            <p className="text-text-dark text-[13px] font-semibold leading-normal font-display truncate w-full text-center">{profile.name}</p>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -170,11 +177,23 @@ const Matches = () => {
                             <p className="text-text-muted text-sm italic w-full text-center pt-8">No new likes yet.</p>
                         ) : (
                             <div className="grid grid-cols-2 gap-4 p-4">
-                                {likesYou.map(({ uid, profile, sharedEvents }) => (
-                                    <div key={uid} onClick={() => navigate(`/profile/${uid}`)} className="relative bg-white rounded-2xl overflow-hidden shadow-sm border border-border-light group cursor-pointer hover:shadow-md transition-shadow">
-                                        <div className="bg-cover bg-center flex flex-col justify-end aspect-[3/4]" style={{ backgroundImage: `linear-gradient(0deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0) 100%), url('${profile.images && profile.images[0] ? profile.images[0] : 'https://via.placeholder.com/300'}')` }}>
-                                            <div className="p-3">
-                                                <p className="text-white text-base font-bold leading-tight font-display">{profile.name}, {getAge(profile.birthDate)}</p>
+                                {likesYou.map(({ uid, profile, sharedEvents }) => {
+                                    const imageUrl = profile.isAvatarMode
+                                        ? (profile.avatarId ? getAvatarUrl(profile.avatarId) : getAvatar(uid))
+                                        : (profile.images && profile.images.find(img => img) ? profile.images.find(img => img) : 'https://via.placeholder.com/300');
+
+                                    return (
+                                        <div key={uid} onClick={() => navigate(`/profile/${uid}`)} className="relative bg-white rounded-2xl overflow-hidden shadow-sm border border-border-light group cursor-pointer hover:shadow-md transition-shadow aspect-[3/4]">
+                                            <img
+                                                src={imageUrl}
+                                                alt={profile.name}
+                                                className="absolute inset-0 w-full h-full object-cover"
+                                                style={{ backgroundColor: profile.isAvatarMode ? '#fff' : '#e5e7eb' }}
+                                                onError={(e) => { e.target.src = 'https://via.placeholder.com/300'; }}
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none" />
+                                            <div className="absolute inset-0 flex flex-col justify-end p-3 z-10">
+                                                <p className="text-white text-base font-bold leading-tight font-display drop-shadow-md">{profile.name}, {getAge(profile.birthDate)}</p>
                                                 {sharedEvents > 0 && (
                                                     <div className="flex items-center mt-2 bg-accent-blue/90 backdrop-blur-md rounded-full px-2 py-1 w-fit border border-blue-100">
                                                         <span className="material-symbols-outlined text-[10px] text-blue-600 filled-icon mr-1">event</span>
@@ -183,8 +202,8 @@ const Matches = () => {
                                                 )}
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
 
 
                             </div>

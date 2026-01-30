@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getAvatar, getAvatarUrl } from './utils/avatarUtils';
 import { collection, query, where, onSnapshot, doc, getDoc, orderBy } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -148,7 +149,11 @@ const ChatList = () => {
                         </div>
                     ) : (
                         chats.map((chat) => {
-                            const otherUserImage = chat.otherUser?.images?.[0] || 'https://via.placeholder.com/150';
+                            const otherUserImage = chat.otherUser
+                                ? (chat.otherUser.isAvatarMode
+                                    ? (chat.otherUser.avatarId ? getAvatarUrl(chat.otherUser.avatarId) : getAvatar(chat.otherUserId))
+                                    : (chat.otherUser.images?.[0] || 'https://via.placeholder.com/150'))
+                                : 'https://via.placeholder.com/150';
                             const otherUserName = chat.otherUser?.name || 'User';
 
                             return (
@@ -158,7 +163,7 @@ const ChatList = () => {
                                     className="flex items-center gap-4 px-4 py-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer border-b border-gray-50 dark:border-white/5"
                                 >
                                     <div className="relative flex-shrink-0">
-                                        <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" style={{ backgroundImage: `url("${otherUserImage}")` }}></div>
+                                        <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shadow-sm border border-gray-100" style={{ backgroundImage: `url("${otherUserImage}")`, backgroundColor: chat.otherUser?.isAvatarMode ? '#fff' : 'transparent' }}></div>
                                         {/* Status indicator logic could go here */}
                                     </div>
                                     <div className="flex flex-col flex-1 min-w-0">

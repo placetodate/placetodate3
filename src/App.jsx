@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
-import app from './firebase';
+import app, { auth } from './firebase';
 import Login from './Login';
 import Home from './Home';
 import SignUp from './SignUp';
@@ -22,6 +22,33 @@ function App() {
     console.log("Firebase initialized:", app);
   }, []);
 
+  const ProtectedRoute = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        setUser(user);
+        setLoading(false);
+      });
+      return () => unsubscribe();
+    }, []);
+
+    if (loading) {
+      return (
+        <div className="flex h-screen items-center justify-center bg-white">
+          <div className="size-10 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+        </div>
+      );
+    }
+
+    if (!user) {
+      return <Navigate to="/login" replace />;
+    }
+
+    return children;
+  };
+
   return (
     <Router>
       <div className="App font-display">
@@ -29,17 +56,17 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/edit-event" element={<EditEvent />} />
-          <Route path="/edit-event/:id" element={<EditEvent />} />
-          <Route path="/event-details/:id" element={<EventDetails />} />
-          <Route path="/profile/:uid" element={<ProfileView />} />
+          <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
+          <Route path="/edit-event" element={<ProtectedRoute><EditEvent /></ProtectedRoute>} />
+          <Route path="/edit-event/:id" element={<ProtectedRoute><EditEvent /></ProtectedRoute>} />
+          <Route path="/event-details/:id" element={<ProtectedRoute><EventDetails /></ProtectedRoute>} />
+          <Route path="/profile/:uid" element={<ProtectedRoute><ProfileView /></ProtectedRoute>} />
 
-          <Route path="/matches" element={<Matches />} />
-          <Route path="/messages" element={<ChatList />} />
-          <Route path="/chat/:uid" element={<Chat />} />
+          <Route path="/matches" element={<ProtectedRoute><Matches /></ProtectedRoute>} />
+          <Route path="/messages" element={<ProtectedRoute><ChatList /></ProtectedRoute>} />
+          <Route path="/chat/:uid" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
 
-          <Route path="/edit-profile" element={<EditProfile />} />
+          <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
         </Routes>

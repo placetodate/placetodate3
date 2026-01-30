@@ -8,6 +8,7 @@ const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const checkProfileAndRedirect = async (user) => {
@@ -28,22 +29,27 @@ const Login = () => {
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
+        setLoading(true);
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             await checkProfileAndRedirect(userCredential.user);
         } catch (err) {
             setError("Invalid email or password");
             console.error(err);
+            setLoading(false);
         }
     };
 
     const handleGoogleLogin = async () => {
+        setError('');
+        setLoading(true);
         try {
             const result = await signInWithPopup(auth, googleProvider);
             await checkProfileAndRedirect(result.user);
         } catch (err) {
             setError("Google sign in failed");
             console.error(err);
+            setLoading(false);
         }
     };
 
@@ -69,12 +75,13 @@ const Login = () => {
                                 mail
                             </span>
                             <input
-                                className="flex w-full rounded-2xl text-text-main focus:outline-0 focus:ring-2 focus:ring-primary/30 border border-border-light bg-white h-14 pl-12 pr-4 text-base font-normal transition-all"
+                                className="flex w-full rounded-2xl text-text-main focus:outline-0 focus:ring-2 focus:ring-primary/30 border border-border-light bg-white h-14 pl-12 pr-4 text-base font-normal transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="hello@example.com"
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
+                                disabled={loading}
                             />
                         </div>
                     </label>
@@ -85,12 +92,13 @@ const Login = () => {
                                 lock
                             </span>
                             <input
-                                className="flex w-full rounded-2xl text-text-main focus:outline-0 focus:ring-2 focus:ring-primary/30 border border-border-light bg-white h-14 pl-12 pr-12 text-base font-normal transition-all"
+                                className="flex w-full rounded-2xl text-text-main focus:outline-0 focus:ring-2 focus:ring-primary/30 border border-border-light bg-white h-14 pl-12 pr-12 text-base font-normal transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="••••••••"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
+                                disabled={loading}
                             />
                             <button
                                 type="button"
@@ -105,8 +113,15 @@ const Login = () => {
                             Forgot Password?
                         </a>
                     </div>
-                    <button className="mt-2 w-full h-14 bg-primary text-white font-bold rounded-2xl text-lg shadow-md shadow-primary/20 hover:bg-primary/90 active:scale-[0.98] transition-all">
-                        Login
+                    <button
+                        disabled={loading}
+                        className="mt-2 w-full h-14 bg-primary text-white font-bold rounded-2xl text-lg shadow-md shadow-primary/20 hover:bg-primary/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {loading ? (
+                            <div className="size-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                            "Login"
+                        )}
                     </button>
                 </form>
                 <div className="flex items-center gap-4 px-10 py-8">
@@ -115,7 +130,7 @@ const Login = () => {
                     <div className="h-[1px] flex-1 bg-border-light"></div>
                 </div>
                 <div className="px-6 flex flex-col gap-3">
-                    <button onClick={handleGoogleLogin} className="flex items-center justify-center gap-3 w-full h-14 bg-white text-text-main font-bold rounded-2xl border border-border-light shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all">
+                    <button disabled={loading} onClick={handleGoogleLogin} className="flex items-center justify-center gap-3 w-full h-14 bg-white text-text-main font-bold rounded-2xl border border-border-light shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed">
                         <svg className="w-6 h-6" viewBox="0 0 24 24">
                             <path
                                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -134,7 +149,7 @@ const Login = () => {
                                 fill="#EA4335"
                             ></path>
                         </svg>
-                        Continue with Google
+                        {loading ? "Signing in..." : "Continue with Google"}
                     </button>
                 </div>
                 <div className="mt-auto pb-4 pt-4 px-6 text-center">

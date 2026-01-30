@@ -50,6 +50,13 @@ const Events = () => {
             result = events.filter(event => event.type === selectedFilter);
         }
 
+        // Filter out private events
+        result = result.filter(event => {
+            if (!event.isPrivate) return true;
+            if (!user) return false;
+            return event.createdBy === user.uid || (event.attendees && event.attendees.includes(user.uid));
+        });
+
         // Sort: Joined events first
         if (user) {
             result.sort((a, b) => {

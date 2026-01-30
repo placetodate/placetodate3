@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getAvatar, getAvatarUrl } from './utils/avatarUtils';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import BottomNav from './BottomNav';
+import ShareModal from './ShareModal';
 
 const EventDetails = () => {
     const navigate = useNavigate();
@@ -13,6 +15,8 @@ const EventDetails = () => {
     const [user, setUser] = useState(null);
     const [hasJoined, setHasJoined] = useState(false);
     const [attendeesData, setAttendeesData] = useState([]);
+    const [showCopyFeedback, setShowCopyFeedback] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -109,6 +113,53 @@ const EventDetails = () => {
         }
     };
 
+    const handleAddToCalendar = () => {
+        if (!event) return;
+
+        const title = event.title || "PlaceToDate Event";
+        const description = event.description || "";
+        const location = event.location?.name || "";
+
+        // Handle Firestore Timestamp or Date string
+        const startDate = event.dateTime?.toDate ? event.dateTime.toDate() : new Date(event.dateTime);
+        const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // Default 2 hours duration
+
+        const formatDate = (date) => {
+            return date.toISOString().replace(/-|:|\.\d\d\d/g, "");
+        };
+
+        const icsContent = [
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "BEGIN:VEVENT",
+            `SUMMARY:${title}`,
+            `DESCRIPTION:${description}`,
+            `LOCATION:${location}`,
+            `DTSTART:${formatDate(startDate)}`,
+            `DTEND:${formatDate(endDate)}`,
+            "END:VEVENT",
+            "END:VCALENDAR"
+        ].join("\n");
+
+        const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = window.URL.createObjectURL(blob);
+        link.setAttribute("download", `${title.replace(/\s+/g, "_")}.ics`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleOpenMaps = () => {
+        if (!event?.location?.name) return;
+        const query = encodeURIComponent(event.location.name);
+        window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    };
+
+    const handleShare = () => {
+        setShowShareModal(true);
+    };
+
     if (loading) {
         return (
             <div className="flex h-screen items-center justify-center bg-background-light">
@@ -127,7 +178,7 @@ const EventDetails = () => {
     }
 
     return (
-        <div className="font-display bg-background-light flex justify-center text-text-dark h-screen overflow-hidden">
+        <div className="font-display bg-background-light flex justify-center text-text-dark h-[100dvh] overflow-hidden overscroll-none">
             <div className="relative flex w-full flex-col max-w-[430px] h-full overflow-hidden shadow-xl bg-background-light">
                 {/* Header - Sticky */}
                 <div className="shrink-0 z-40 w-full flex items-center bg-white/80 backdrop-blur-md p-4 justify-between border-b border-border-light">
@@ -136,7 +187,7 @@ const EventDetails = () => {
                     </button>
                     <h2 className="text-text-dark text-lg font-bold leading-tight tracking-tight flex-1 text-center">Event Details</h2>
                     <div className="flex w-10 items-center justify-end">
-                        <button className="flex size-10 items-center justify-center rounded-full bg-gray-100 text-text-dark">
+                        <button onClick={handleShare} className="flex size-10 items-center justify-center rounded-full bg-gray-100 text-text-dark hover:bg-gray-200 transition-colors relative">
                             <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>share</span>
                         </button>
                     </div>
@@ -162,24 +213,41 @@ const EventDetails = () => {
                     <div className="relative -mt-10 z-10 bg-background-light rounded-t-[2.5rem] px-4 pt-8 pb-8">
                         <h1 className="text-text-dark tracking-tight text-4xl font-extrabold leading-tight pb-6">{event.title}</h1>
                         <div className="space-y-3">
-                            <div className="flex items-center gap-4 bg-white px-4 min-h-[72px] py-2 rounded-2xl border border-border-light shadow-sm">
-                                <div className="text-primary flex items-center justify-center rounded-xl bg-accent-pink shrink-0 size-12">
-                                    <span className="material-symbols-outlined">calendar_today</span>
+                            <button
+                                onClick={handleAddToCalendar}
+                                className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-2xl"
+                            >
+                                <div className="flex items-center gap-4 bg-white px-4 min-h-[72px] py-2 rounded-2xl border border-border-light shadow-sm active:scale-[0.98] transition-all hover:border-primary/30">
+                                    <div className="text-primary flex items-center justify-center rounded-xl bg-accent-pink shrink-0 size-12">
+                                        <span className="material-symbols-outlined">calendar_today</span>
+                                    </div>
+                                    <div className="flex flex-col justify-center">
+                                        <p className="text-text-dark text-base font-bold leading-normal">{formatDate(event.dateTime, event.createdAt)}</p>
+                                        <p className="text-primary text-sm font-bold leading-normal flex items-center gap-1">
+                                            Add to calendar
+                                            <span className="material-symbols-outlined text-sm">open_in_new</span>
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex flex-col justify-center">
-                                    <p className="text-text-dark text-base font-bold leading-normal">{formatDate(event.dateTime, event.createdAt)}</p>
-                                    <p className="text-primary text-sm font-medium leading-normal">Add to calendar</p>
+                            </button>
+
+                            <button
+                                onClick={handleOpenMaps}
+                                className="w-full text-left focus:outline-none focus:ring-2 focus:ring-sky-500/20 rounded-2xl"
+                            >
+                                <div className="flex items-center gap-4 bg-white px-4 min-h-[72px] py-2 rounded-2xl border border-border-light shadow-sm active:scale-[0.98] transition-all hover:border-sky-200">
+                                    <div className="text-secondary-dark text-sky-500 flex items-center justify-center rounded-xl bg-sky-50 shrink-0 size-12">
+                                        <span className="material-symbols-outlined">location_on</span>
+                                    </div>
+                                    <div className="flex flex-col justify-center">
+                                        <p className="text-text-dark text-base font-bold leading-normal max-w-[200px] truncate">{event.location?.name || 'Location TBD'}</p>
+                                        <p className="text-sky-500 text-sm font-bold leading-normal flex items-center gap-1">
+                                            Open in Maps
+                                            <span className="material-symbols-outlined text-sm">open_in_new</span>
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-4 bg-white px-4 min-h-[72px] py-2 rounded-2xl border border-border-light shadow-sm">
-                                <div className="text-secondary-dark text-sky-500 flex items-center justify-center rounded-xl bg-sky-50 shrink-0 size-12">
-                                    <span className="material-symbols-outlined">location_on</span>
-                                </div>
-                                <div className="flex flex-col justify-center">
-                                    <p className="text-text-dark text-base font-bold leading-normal max-w-[200px] truncate">{event.location?.name || 'Location TBD'}</p>
-                                    <p className="text-sky-500 text-sm font-medium leading-normal">Open in Maps</p>
-                                </div>
-                            </div>
+                            </button>
                         </div>
                         <div className="py-8">
                             <h3 className="text-text-dark text-xl font-bold mb-3">About the event</h3>
@@ -196,7 +264,10 @@ const EventDetails = () => {
                                 <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-4 px-4 pb-4">
                                     {attendeesData.map((attendee) => {
                                         const age = attendee.birthDate ? new Date().getFullYear() - new Date(attendee.birthDate).getFullYear() : 'N/A';
-                                        const imageUrl = attendee.images && attendee.images[0] ? attendee.images[0] : 'https://via.placeholder.com/150'; // Fallback image
+
+                                        const imageUrl = attendee.isAvatarMode
+                                            ? (attendee.avatarId ? getAvatarUrl(attendee.avatarId) : getAvatar(attendee.uid))
+                                            : (attendee.images && attendee.images.find(img => img) ? attendee.images.find(img => img) : 'https://via.placeholder.com/150');
                                         const isMatch = false;
 
                                         return (
@@ -205,7 +276,7 @@ const EventDetails = () => {
                                                 onClick={() => navigate(`/profile/${attendee.uid}`)}
                                                 className="flex-none w-40 relative group cursor-pointer active:scale-95 transition-transform"
                                             >
-                                                <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden border border-border-light shadow-sm">
+                                                <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden border border-border-light shadow-sm bg-white">
                                                     <img className="w-full h-full object-cover" src={imageUrl} alt={attendee.name || 'User'} />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                                                     <div className="absolute bottom-3 left-3">
@@ -256,6 +327,13 @@ const EventDetails = () => {
 
                 {/* Bottom Nav - Sticky */}
                 <BottomNav />
+
+                <ShareModal
+                    isOpen={showShareModal}
+                    onClose={() => setShowShareModal(false)}
+                    eventLink={window.location.href}
+                    eventName={event.title}
+                />
             </div>
         </div >
     );

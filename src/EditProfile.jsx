@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getAvatar, getRandomAvatar, getAvatarId, getRandomAvatarId, getAvatarUrl } from './utils/avatarUtils';
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
@@ -25,6 +26,11 @@ const EditProfile = () => {
     const [images, setImages] = useState(Array(6).fill(null));
     const [imagePositions, setImagePositions] = useState(Array(6).fill({ x: 50, y: 50 }));
     const [isProfileComplete, setIsProfileComplete] = useState(false);
+    const [isAvatarMode, setIsAvatarMode] = useState(false);
+    const [avatarId, setAvatarId] = useState('');
+    const [initialData, setInitialData] = useState(null);
+    const [isDirty, setIsDirty] = useState(false);
+    const [uploadingSlot, setUploadingSlot] = useState(null);
 
     // Form State
     const [name, setName] = useState('');
@@ -80,6 +86,22 @@ const EditProfile = () => {
                 setImages(data.images || Array(6).fill(null));
                 setImagePositions(data.imagePositions || Array(6).fill({ x: 50, y: 50 }));
                 setIsProfileComplete(!!data.isProfileComplete);
+                setIsAvatarMode(!!data.isAvatarMode);
+                setAvatarId(data.avatarId || getAvatarId(uid));
+
+                setInitialData({
+                    name: data.name || '',
+                    gender: data.gender || 'female',
+                    interestedIn: data.interestedIn || 'men',
+                    livingIn: data.livingIn || '',
+                    birthDate: data.birthDate || '1995-06-15',
+                    bio: data.bio || '',
+                    interests: data.interests || [],
+                    images: data.images || Array(6).fill(null),
+                    imagePositions: data.imagePositions || Array(6).fill({ x: 50, y: 50 }),
+                    isAvatarMode: !!data.isAvatarMode,
+                    avatarId: data.avatarId || getAvatarId(uid)
+                });
             }
         } catch (error) {
             console.error("Error fetching profile:", error);
@@ -95,6 +117,7 @@ const EditProfile = () => {
         const file = e.target.files[0];
         if (!file || currentImageSlot === null || !user) return;
 
+        setUploadingSlot(currentImageSlot);
         try {
             const resizedDataUrl = await resizeImage(file);
             const blob = await (await fetch(resizedDataUrl)).blob();
@@ -110,12 +133,41 @@ const EditProfile = () => {
             console.error("Error uploading image:", error);
             setError("Failed to upload image. Please try again.");
         } finally {
+            setUploadingSlot(null);
             e.target.value = null; // Reset input
         }
     };
 
-    const validateImages = (currentImages) => {
-        if (!currentImages.some(img => img !== null)) {
+    const handleShuffleAvatar = () => {
+        setAvatarId(getRandomAvatarId());
+    };
+
+    useEffect(() => {
+        if (!initialData) return;
+
+        const checkDirty = () => {
+            if (name !== initialData.name) return true;
+            if (gender !== initialData.gender) return true;
+            if (interestedIn !== initialData.interestedIn) return true;
+            if (livingIn !== initialData.livingIn) return true;
+            if (birthDate !== initialData.birthDate) return true;
+            if (bio !== initialData.bio) return true;
+            if (isAvatarMode !== initialData.isAvatarMode) return true;
+            if (avatarId !== initialData.avatarId) return true;
+
+            // Arrays comparison
+            if (JSON.stringify(selectedInterests.sort()) !== JSON.stringify(initialData.interests.sort())) return true;
+            if (JSON.stringify(images) !== JSON.stringify(initialData.images)) return true;
+            if (JSON.stringify(imagePositions) !== JSON.stringify(initialData.imagePositions)) return true;
+
+            return false;
+        };
+
+        setIsDirty(checkDirty());
+    }, [name, gender, interestedIn, livingIn, birthDate, bio, selectedInterests, images, imagePositions, isAvatarMode, avatarId, initialData]);
+
+    const validateImages = (currentImages, avatarMode) => {
+        if (!avatarMode && !currentImages.some(img => img !== null)) {
             setFormErrors(prev => ({ ...prev, images: "At least 1 photo is required" }));
         } else {
             setFormErrors(prev => {
@@ -127,8 +179,8 @@ const EditProfile = () => {
     };
 
     useEffect(() => {
-        validateImages(images);
-    }, [images]);
+        validateImages(images, isAvatarMode);
+    }, [images, isAvatarMode]);
 
     const handleRemoveImage = (index, e) => {
         e.stopPropagation();
@@ -205,7 +257,7 @@ const EditProfile = () => {
         const errors = {};
         if (!name.trim()) errors.name = "Name is required";
         if (!birthDate) errors.birthDate = "Date of Birth is required";
-        if (!images.some(img => img !== null)) errors.images = "At least 1 photo is required";
+        if (!isAvatarMode && !images.some(img => img !== null)) errors.images = "At least 1 photo is required";
 
         const age = new Date().getFullYear() - new Date(birthDate).getFullYear();
         if (age < 18) errors.birthDate = "You must be at least 18 years old";
@@ -235,7 +287,9 @@ const EditProfile = () => {
                 imagePositions,
                 isProfileComplete: true,
                 updatedAt: new Date(),
-                email: user.email
+                email: user.email,
+                isAvatarMode,
+                avatarId: avatarId || getAvatarId(user.uid)
             };
 
             await setDoc(doc(db, "users", user.uid), userData, { merge: true });
@@ -285,7 +339,7 @@ const EditProfile = () => {
                     )}
                     <section className="mb-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-bold tracking-tight text-dark-gray">Your Photos <span className="text-red-600">*</span></h3>
+                            <h3 className="text-lg font-bold tracking-tight text-dark-gray">Your Photos {!isAvatarMode && <span className="text-red-600">*</span>}</h3>
                             <span className="text-sm text-primary font-semibold">{images.filter(Boolean).length}/6 Slots</span>
                         </div>
                         {formErrors.images && <p className="text-red-600 text-sm mb-2 font-medium">{formErrors.images}</p>}
@@ -304,24 +358,31 @@ const EditProfile = () => {
                                     <div
                                         key={i}
                                         onMouseDown={(e) => {
+                                            if (uploadingSlot === i) {
+                                                e.preventDefault();
+                                                return;
+                                            }
                                             if (images[i]) {
                                                 e.stopPropagation();
                                                 handleMouseDown(i, e);
-                                            } else {
-                                                handleImageClick(i);
                                             }
                                         }}
                                         onTouchStart={(e) => {
+                                            if (uploadingSlot === i) {
+                                                e.preventDefault();
+                                                return;
+                                            }
                                             if (images[i]) {
                                                 e.stopPropagation();
                                                 handleMouseDown(i, e);
-                                            } else {
-                                                handleImageClick(i);
                                             }
                                         }}
-                                        onClick={() => !images[i] && handleImageClick(i)}
-                                        className={`relative aspect-[3/4] rounded-2xl border-2 overflow-hidden bg-cover bg-no-repeat shadow-sm transition-all touch-none ${img
-                                            ? `border-primary/20 ${draggingSlot === i ? 'cursor-grabbing' : 'cursor-grab'}`
+                                        onClick={() => {
+                                            if (uploadingSlot === i) return;
+                                            !images[i] && handleImageClick(i);
+                                        }}
+                                        className={`relative aspect-[3/4] rounded-2xl border-2 bg-cover bg-no-repeat shadow-sm transition-all touch-none ${img
+                                            ? `overflow-hidden border-primary/20 ${draggingSlot === i ? 'cursor-grabbing' : 'cursor-grab'}`
                                             : 'border-dashed border-light-gray bg-white hover:border-primary/40 hover:bg-accent-pink/30 flex items-center justify-center group cursor-pointer'
                                             }`}
                                         style={img ? {
@@ -329,7 +390,11 @@ const EditProfile = () => {
                                             backgroundPosition: `${imagePositions[i]?.x || 50}% ${imagePositions[i]?.y || 50}%`
                                         } : {}}
                                     >
-                                        {img ? (
+                                        {uploadingSlot === i ? (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-20">
+                                                <div className="size-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                            </div>
+                                        ) : img ? (
                                             <>
                                                 <button
                                                     onClick={(e) => handleRemoveImage(i, e)}
@@ -352,6 +417,61 @@ const EditProfile = () => {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Avatar Mode Checkbox */}
+                        <div className="mt-4 bg-purple-50 rounded-2xl p-4 border border-purple-100">
+                            <label className="flex items-start gap-3 cursor-pointer">
+                                <div className="relative flex items-center mt-1">
+                                    <input
+                                        type="checkbox"
+                                        className="peer sr-only"
+                                        checked={isAvatarMode}
+                                        onChange={(e) => {
+                                            setIsAvatarMode(e.target.checked);
+                                            if (e.target.checked) {
+                                                // Always pick a random one on toggle to be fresh
+                                                setAvatarId(getRandomAvatarId());
+                                            }
+                                        }}
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="material-symbols-outlined text-purple-600">face</span>
+                                        <p className="font-bold text-dark-gray">Show Face Avatar</p>
+                                    </div>
+                                    <p className="text-sm text-medium-gray">
+                                        Instead of your photos, users will see a generated avatar. This helps maintain privacy while keeping your profile fun!
+                                    </p>
+                                </div>
+                            </label>
+                            {isAvatarMode && (
+                                <div className="mt-4 flex flex-col items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
+                                    <img
+                                        src={getAvatarUrl(avatarId || (user ? getAvatarId(user.uid) : ''))}
+                                        alt="My Avatar"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleShuffleAvatar();
+                                        }}
+                                        className="size-40 rounded-full border-4 border-white shadow-md bg-white cursor-pointer hover:scale-105 transition-transform"
+                                        title="Click to shuffle"
+                                    />
+                                    <button
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            handleShuffleAvatar();
+                                        }}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-white border border-purple-200 text-purple-600 rounded-full text-xs font-bold shadow-sm hover:bg-purple-50 transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">refresh</span>
+                                        Shuffle Look
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </section>
 
@@ -555,8 +675,8 @@ const EditProfile = () => {
                 <div className="shrink-0 max-w-[430px] mx-auto w-full px-6 py-4 bg-white border-t border-border-light z-10">
                     <button
                         onClick={handleSave}
-                        disabled={saving || Object.keys(formErrors).length > 0}
-                        className="w-full bg-primary hover:brightness-105 active:scale-[0.98] text-white font-bold h-14 rounded-2xl shadow-xl shadow-primary/30 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                        disabled={saving || Object.keys(formErrors).length > 0 || !isDirty}
+                        className="w-full bg-primary hover:brightness-105 active:scale-[0.98] text-white font-bold h-14 rounded-2xl shadow-xl shadow-primary/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none bg-gray-400"
                     >
                         {saving ? (
                             <span className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>

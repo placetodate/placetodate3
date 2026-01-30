@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getAvatar, getAvatarUrl } from './utils/avatarUtils';
 import { doc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -189,7 +190,9 @@ const Chat = () => {
     }
 
     const userAge = user.birthDate ? new Date().getFullYear() - new Date(user.birthDate).getFullYear() : '';
-    const userImage = user.images && user.images.length > 0 ? user.images[0] : 'https://via.placeholder.com/150';
+    const userImage = user.isAvatarMode
+        ? (user.avatarId ? getAvatarUrl(user.avatarId) : getAvatar(uid))
+        : (user.images && user.images.length > 0 ? user.images[0] : 'https://via.placeholder.com/150');
 
     return (
         <div className="flex flex-col h-screen max-w-md mx-auto relative overflow-hidden bg-soft-bg border-x border-border-light shadow-2xl font-display">
@@ -201,8 +204,8 @@ const Chat = () => {
                 <div className="flex items-center gap-3 cursor-pointer flex-1 justify-center" onClick={() => navigate(`/profile/${uid}`)}>
                     <div className="relative">
                         <div
-                            className="w-10 h-10 rounded-full bg-center bg-cover border border-border-light"
-                            style={{ backgroundImage: `url('${userImage}')` }}
+                            className="w-10 h-10 rounded-full bg-center bg-cover border border-border-light shadow-sm"
+                            style={{ backgroundImage: `url('${userImage}')`, backgroundColor: user.isAvatarMode ? '#fff' : 'transparent' }}
                         >
                         </div>
                         <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
@@ -227,21 +230,31 @@ const Chat = () => {
                     const timeString = msg.createdAt ? new Date(msg.createdAt.toMillis()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
 
                     let senderImage = 'https://via.placeholder.com/150';
+                    let isSenderAvatar = false;
+
                     if (isMe) {
-                        if (currentUserProfile && currentUserProfile.images && currentUserProfile.images.length > 0) {
-                            senderImage = currentUserProfile.images[0];
+                        if (currentUserProfile) {
+                            if (currentUserProfile.isAvatarMode) {
+                                senderImage = currentUserProfile.avatarId ? getAvatarUrl(currentUserProfile.avatarId) : getAvatar(currentUser.uid);
+                                isSenderAvatar = true;
+                            } else if (currentUserProfile.images && currentUserProfile.images.length > 0) {
+                                senderImage = currentUserProfile.images[0];
+                            } else if (currentUser?.photoURL) {
+                                senderImage = currentUser.photoURL;
+                            }
                         } else if (currentUser?.photoURL) {
                             senderImage = currentUser.photoURL;
                         }
                     } else {
                         senderImage = userImage;
+                        isSenderAvatar = user.isAvatarMode;
                     }
 
                     return (
                         <div key={msg.id} className={`flex items-end gap-3 max-w-[85%] ${isMe ? 'self-end flex-row-reverse' : ''}`}>
                             <div
                                 className="w-12 h-12 rounded-2xl bg-center bg-cover shrink-0 border border-border-light shadow-sm"
-                                style={{ backgroundImage: `url('${senderImage}')` }}
+                                style={{ backgroundImage: `url('${senderImage}')`, backgroundColor: isSenderAvatar ? '#fff' : 'transparent' }}
                             ></div>
                             <div className={`flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
                                 <span className="text-[10px] text-text-muted px-1">{timeString}</span>

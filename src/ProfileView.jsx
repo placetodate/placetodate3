@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getAvatar, getAvatarUrl } from './utils/avatarUtils';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, setDoc, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -157,9 +158,19 @@ const ProfileView = () => {
     if (!profile) return null;
 
     const age = profile.birthDate ? new Date().getFullYear() - new Date(profile.birthDate).getFullYear() : 'N/A';
-    const rawImages = profile.images || [];
-    const validImages = rawImages.filter(img => img && typeof img === 'string');
-    const images = validImages.length > 0 ? validImages : ['https://via.placeholder.com/400'];
+
+    // Avatar Mode Logic
+    let displayImages = [];
+    if (profile.isAvatarMode) {
+        const avatar = profile.avatarId ? getAvatarUrl(profile.avatarId) : getAvatar(profile.id || uid);
+        displayImages = [avatar];
+    } else {
+        const rawImages = profile.images || [];
+        const validImages = rawImages.filter(img => img && typeof img === 'string');
+        displayImages = validImages.length > 0 ? validImages : ['https://via.placeholder.com/400'];
+    }
+
+    const images = displayImages;
     const imageUrl = images[currentImageIndex] || images[0];
 
     const handleNextImage = () => {
@@ -199,11 +210,17 @@ const ProfileView = () => {
                             <div className="absolute inset-y-0 left-0 w-1/3 z-10" onClick={(e) => { e.stopPropagation(); handlePrevImage(e); }}></div>
                             <div className="absolute inset-y-0 right-0 w-2/3 z-10" onClick={(e) => { e.stopPropagation(); handleNextImage(); }}></div>
 
-                            <div className="absolute top-4 left-4 z-20">
+                            <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 items-start">
                                 <div className="flex items-center gap-2 bg-primary/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg border border-white/20">
                                     <span className="material-symbols-outlined text-white text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>celebration</span>
                                     <span className="text-white text-[10px] font-bold uppercase tracking-wider">{joinedEvents.length} Shared Event{joinedEvents.length !== 1 ? 's' : ''}</span>
                                 </div>
+                                {profile.isAvatarMode && (
+                                    <div className="flex items-center gap-2 bg-purple-600/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg border border-white/20 animate-in fade-in slide-in-from-left-2 duration-500 delay-100">
+                                        <span className="material-symbols-outlined text-white text-xs">face</span>
+                                        <span className="text-white text-[10px] font-bold uppercase tracking-wider">Avatar Mode</span>
+                                    </div>
+                                )}
                             </div>
                             <div className="flex justify-center gap-2 p-5 z-20">
                                 {images.map((_, idx) => (

@@ -6,6 +6,7 @@ import { storage, db, auth } from "./firebase";
 import EventMap from './EventMap';
 import { resizeImage } from './utils/imageUtils';
 import BottomNav from './BottomNav';
+import ShareModal from './ShareModal';
 
 const EditEvent = () => {
     const navigate = useNavigate();
@@ -13,6 +14,7 @@ const EditEvent = () => {
     const isEditMode = !!id;
 
     const [selectedEventType, setSelectedEventType] = useState('Coffee');
+    const [isPrivate, setIsPrivate] = useState(false);
     const [eventImage, setEventImage] = useState('https://lh3.googleusercontent.com/aida-public/AB6AXuB9WS9r2B6wLD0voVQ4UFtwvmx9cRI71kJG4XCF8q0fyRkt9K9KNFBdTxflBpaco9wVeqwjXIvzRGZ-W76LgACrzHpqhTx2O6nLa5tgYlYwUMao-1_yjVgsKRn0bRp9xvfGEXp5M03pzayVBQ9aRBdQ65O8xnhFb4UD_i0Tpe6v6VLeRyJW-97yqPDKCnhUNHCc8-nJvoiIWjFItFTvqga1h0S6Fy9cjL2nI_xs5yKAOl81fkZIEaW3ZAQ8_ZtKeRmt_8N9ZWg1lxM');
     const [uploading, setUploading] = useState(false);
     const [dateTime, setDateTime] = useState('2023-10-24T18:30');
@@ -29,6 +31,9 @@ const EditEvent = () => {
     const [error, setError] = useState('');
     const [errors, setErrors] = useState({});
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    // Export State
+    const [showExportModal, setShowExportModal] = useState(false);
 
     useEffect(() => {
         if (error) {
@@ -57,6 +62,9 @@ const EditEvent = () => {
 
                 if (data.dateTime) {
                     setDateTime(data.dateTime);
+                }
+                if (data.isPrivate !== undefined) {
+                    setIsPrivate(data.isPrivate);
                 }
 
                 if (data.location) {
@@ -211,6 +219,7 @@ const EditEvent = () => {
                 title: eventName,
                 description: description,
                 type: selectedEventType,
+                isPrivate: isPrivate,
                 dateTime: dateTime,
                 location: {
                     name: locationName,
@@ -253,8 +262,9 @@ const EditEvent = () => {
         { id: 'art', label: 'Art', icon: 'theater_comedy' },
     ];
 
+
     return (
-        <div className="bg-background-soft flex justify-center font-display h-screen overflow-hidden">
+        <div className="bg-background-soft flex justify-center font-display h-[100dvh] overflow-hidden overscroll-none">
             <div className="relative w-full max-w-[480px] h-full flex flex-col bg-background-soft shadow-xl">
                 {/* Header */}
                 <header className="shrink-0 z-40 w-full flex items-center bg-white/80 backdrop-blur-md p-4 justify-between border-b border-border-light">
@@ -263,7 +273,16 @@ const EditEvent = () => {
                     </button>
                     <h1 className="text-text-dark text-lg font-bold leading-tight tracking-tight flex-1 text-center">{isEditMode ? 'Edit Event' : 'New Event'}</h1>
                     <div className="flex w-10 items-center justify-end">
-                        <div className="size-10"></div>
+                        {isEditMode ? (
+                            <button
+                                onClick={() => setShowExportModal(true)}
+                                className="size-10 flex items-center justify-center rounded-full bg-gray-100 text-text-dark hover:bg-gray-200 transition-colors"
+                            >
+                                <span className="material-symbols-outlined">share</span>
+                            </button>
+                        ) : (
+                            <div className="size-10"></div>
+                        )}
                     </div>
                 </header>
 
@@ -429,6 +448,24 @@ const EditEvent = () => {
                                 <span className="material-symbols-outlined text-xl">my_location</span>
                             </button>
                         </div>
+                        <div className="flex items-center justify-between pt-4 pb-2">
+                            <h3 className="text-sm font-bold text-primary ml-1">Privacy</h3>
+                        </div>
+                        <div className="bg-white border border-border-light rounded-2xl p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className={`size-10 rounded-full flex items-center justify-center ${isPrivate ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-500'}`}>
+                                    <span className="material-symbols-outlined">{isPrivate ? 'lock' : 'public'}</span>
+                                </div>
+                                <div>
+                                    <p className="font-bold text-text-dark">Make this event private</p>
+                                    <p className="text-xs text-text-muted">Only attendees can see this event</p>
+                                </div>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" className="sr-only peer" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -485,6 +522,13 @@ const EditEvent = () => {
                         </div>
                     </div>
                 )}
+
+                <ShareModal
+                    isOpen={showExportModal}
+                    onClose={() => setShowExportModal(false)}
+                    eventLink={`${window.location.origin}/event-details/${id}`}
+                    eventName={eventName}
+                />
             </div>
         </div>
     );
