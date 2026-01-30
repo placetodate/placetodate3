@@ -77,7 +77,8 @@ const EventDetails = () => {
         }
     }, [event]);
 
-    const formatDate = (dateString, timestamp) => {
+    const formatDate = (dateString, timestamp, isAnytime) => {
+        if (isAnytime) return 'Anytime';
         if (!dateString && !timestamp) return 'Date TBD';
         const date = dateString ? new Date(dateString) : (timestamp?.toDate ? timestamp.toDate() : new Date(timestamp));
         return date.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -215,18 +216,21 @@ const EventDetails = () => {
                         <div className="space-y-3">
                             <button
                                 onClick={handleAddToCalendar}
-                                className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-2xl"
+                                disabled={event.isAnytime}
+                                className={`w-full text-left focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-2xl ${event.isAnytime ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <div className="flex items-center gap-4 bg-white px-4 min-h-[72px] py-2 rounded-2xl border border-border-light shadow-sm active:scale-[0.98] transition-all hover:border-primary/30">
                                     <div className="text-primary flex items-center justify-center rounded-xl bg-accent-pink shrink-0 size-12">
                                         <span className="material-symbols-outlined">calendar_today</span>
                                     </div>
                                     <div className="flex flex-col justify-center">
-                                        <p className="text-text-dark text-base font-bold leading-normal">{formatDate(event.dateTime, event.createdAt)}</p>
-                                        <p className="text-primary text-sm font-bold leading-normal flex items-center gap-1">
-                                            Add to calendar
-                                            <span className="material-symbols-outlined text-sm">open_in_new</span>
-                                        </p>
+                                        <p className="text-text-dark text-base font-bold leading-normal">{formatDate(event.dateTime, event.createdAt, event.isAnytime)}</p>
+                                        {!event.isAnytime && (
+                                            <p className="text-primary text-sm font-bold leading-normal flex items-center gap-1">
+                                                Add to calendar
+                                                <span className="material-symbols-outlined text-sm">open_in_new</span>
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </button>

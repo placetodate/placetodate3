@@ -80,7 +80,8 @@ const Events = () => {
             date.getFullYear() === today.getFullYear();
     };
 
-    const formatDate = (dateString, timestamp) => {
+    const formatDate = (dateString, timestamp, isAnytime) => {
+        if (isAnytime) return 'Anytime';
         if (!dateString && !timestamp) return 'Date TBD';
         const date = dateString ? new Date(dateString) : (timestamp?.toDate ? timestamp.toDate() : new Date(timestamp));
         return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -100,7 +101,7 @@ const Events = () => {
                         <button onClick={() => navigate('/edit-event')} className="size-10 flex items-center justify-center rounded-full bg-accent-pastel hover:bg-pink-100 transition-colors border border-pink-100">
                             <span className="material-symbols-outlined text-primary text-[24px]">add</span>
                         </button>
-                        <button className="size-10 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-colors border border-border-light">
+                        <button onClick={() => navigate('/settings')} className="size-10 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-colors border border-border-light">
                             <span className="material-symbols-outlined text-text-muted text-[24px]">tune</span>
                         </button>
                     </div>
@@ -183,7 +184,7 @@ const Events = () => {
                                             <div className="space-y-2">
                                                 <div className="flex items-center gap-2 text-text-muted">
                                                     <span className="material-symbols-outlined text-[18px]">calendar_today</span>
-                                                    <p className="text-sm font-medium">{formatDate(event.dateTime, event.createdAt)}</p>
+                                                    <p className="text-sm font-medium">{formatDate(event.dateTime, event.createdAt, event.isAnytime)}</p>
                                                 </div>
                                                 <div className="flex items-center gap-2 text-text-muted">
                                                     <span className="material-symbols-outlined text-[18px]">location_on</span>

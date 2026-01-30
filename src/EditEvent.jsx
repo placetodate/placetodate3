@@ -15,6 +15,7 @@ const EditEvent = () => {
 
     const [selectedEventType, setSelectedEventType] = useState('Coffee');
     const [isPrivate, setIsPrivate] = useState(false);
+    const [isAnytime, setIsAnytime] = useState(false);
     const [eventImage, setEventImage] = useState('https://lh3.googleusercontent.com/aida-public/AB6AXuB9WS9r2B6wLD0voVQ4UFtwvmx9cRI71kJG4XCF8q0fyRkt9K9KNFBdTxflBpaco9wVeqwjXIvzRGZ-W76LgACrzHpqhTx2O6nLa5tgYlYwUMao-1_yjVgsKRn0bRp9xvfGEXp5M03pzayVBQ9aRBdQ65O8xnhFb4UD_i0Tpe6v6VLeRyJW-97yqPDKCnhUNHCc8-nJvoiIWjFItFTvqga1h0S6Fy9cjL2nI_xs5yKAOl81fkZIEaW3ZAQ8_ZtKeRmt_8N9ZWg1lxM');
     const [uploading, setUploading] = useState(false);
     const [dateTime, setDateTime] = useState('2023-10-24T18:30');
@@ -65,6 +66,9 @@ const EditEvent = () => {
                 }
                 if (data.isPrivate !== undefined) {
                     setIsPrivate(data.isPrivate);
+                }
+                if (data.isAnytime !== undefined) {
+                    setIsAnytime(data.isAnytime);
                 }
 
                 if (data.location) {
@@ -182,7 +186,7 @@ const EditEvent = () => {
         const newErrors = {};
         if (!eventName.trim()) newErrors.eventName = "Event Name is required";
         if (!description.trim()) newErrors.description = "Description is required";
-        if (!dateTime) newErrors.dateTime = "Date and time are required";
+        if (!isAnytime && !dateTime) newErrors.dateTime = "Date and time are required";
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -220,7 +224,8 @@ const EditEvent = () => {
                 description: description,
                 type: selectedEventType,
                 isPrivate: isPrivate,
-                dateTime: dateTime,
+                isAnytime: isAnytime,
+                dateTime: isAnytime ? null : dateTime,
                 location: {
                     name: locationName,
                     coordinates: {
@@ -398,31 +403,50 @@ const EditEvent = () => {
                             </div>
                         </div>
                         <div className="py-4">
-                            <p className="px-1 text-sm font-bold text-primary mb-3">When</p>
-                            <div className={`bg-white border rounded-2xl p-4 flex items-center gap-3 ${errors.dateTime ? 'border-2 border-red-600' : 'border-border-light'}`}>
-                                <span className="material-symbols-outlined text-primary">calendar_month</span>
-                                <div className="flex-1">
-                                    <p className="text-[10px] uppercase font-bold text-gray-400">Date & Time</p>
-                                    <input
-                                        type="datetime-local"
-                                        value={dateTime}
-                                        onChange={(e) => {
-                                            setDateTime(e.target.value);
-                                            if (!e.target.value) {
-                                                setErrors(prev => ({ ...prev, dateTime: "Date and time are required" }));
-                                            } else {
-                                                setErrors(prev => {
-                                                    const newErrors = { ...prev };
-                                                    delete newErrors.dateTime;
-                                                    return newErrors;
-                                                });
-                                            }
-                                        }}
-                                        className="w-full text-sm font-semibold text-text-soft-dark border-none p-0 focus:ring-0"
-                                    />
-                                </div>
+                            <div className="flex items-center justify-between mb-3 px-1">
+                                <p className="text-sm font-bold text-primary">When</p>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <div className="relative inline-flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={isAnytime}
+                                            onChange={(e) => setIsAnytime(e.target.checked)}
+                                        />
+                                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                    </div>
+                                    <span className="text-xs font-medium text-gray-500">Anytime</span>
+                                </label>
                             </div>
-                            {errors.dateTime && <p className="text-xs text-red-600 mt-1 ml-1 font-medium">{errors.dateTime}</p>}
+
+                            {!isAnytime && (
+                                <>
+                                    <div className={`bg-white border rounded-2xl p-4 flex items-center gap-3 ${errors.dateTime ? 'border-2 border-red-600' : 'border-border-light'}`}>
+                                        <span className="material-symbols-outlined text-primary">calendar_month</span>
+                                        <div className="flex-1">
+                                            <p className="text-[10px] uppercase font-bold text-gray-400">Date & Time</p>
+                                            <input
+                                                type="datetime-local"
+                                                value={dateTime}
+                                                onChange={(e) => {
+                                                    setDateTime(e.target.value);
+                                                    if (!e.target.value) {
+                                                        setErrors(prev => ({ ...prev, dateTime: "Date and time are required" }));
+                                                    } else {
+                                                        setErrors(prev => {
+                                                            const newErrors = { ...prev };
+                                                            delete newErrors.dateTime;
+                                                            return newErrors;
+                                                        });
+                                                    }
+                                                }}
+                                                className="w-full text-sm font-semibold text-text-soft-dark border-none p-0 focus:ring-0"
+                                            />
+                                        </div>
+                                    </div>
+                                    {errors.dateTime && <p className="text-xs text-red-600 mt-1 ml-1 font-medium">{errors.dateTime}</p>}
+                                </>
+                            )}
                         </div>
                         <div className="flex items-center justify-between pt-4">
                             <h3 className="text-sm font-bold text-primary ml-1">Location</h3>

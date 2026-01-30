@@ -12,6 +12,8 @@ import ProfileView from './ProfileView';
 import Chat from './Chat';
 import ChatList from './ChatList';
 import EditProfile from './EditProfile';
+import Settings from './Settings';
+import ContactUs from './ContactUs';
 
 import TermsOfService from './TermsOfService';
 import PrivacyPolicy from './PrivacyPolicy';
@@ -57,6 +59,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/contact" element={<ProtectedRoute><ContactUs /></ProtectedRoute>} />
           <Route path="/edit-event" element={<ProtectedRoute><EditEvent /></ProtectedRoute>} />
           <Route path="/edit-event/:id" element={<ProtectedRoute><EditEvent /></ProtectedRoute>} />
           <Route path="/event-details/:id" element={<ProtectedRoute><EventDetails /></ProtectedRoute>} />
