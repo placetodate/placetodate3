@@ -22,6 +22,16 @@ import Matches from './Matches';
 function App() {
   useEffect(() => {
     console.log("Firebase initialized:", app);
+
+    // Check local storage or system preference for theme
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, []);
 
   const ProtectedRoute = ({ children }) => {

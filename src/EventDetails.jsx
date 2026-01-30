@@ -179,16 +179,16 @@ const EventDetails = () => {
     }
 
     return (
-        <div className="font-display bg-background-light flex justify-center text-text-dark h-[100dvh] overflow-hidden overscroll-none">
-            <div className="relative flex w-full flex-col max-w-[430px] h-full overflow-hidden shadow-xl bg-background-light">
+        <div className="font-display bg-background-light dark:bg-background-dark flex justify-center text-text-dark dark:text-white h-[100dvh] overflow-hidden overscroll-none transition-colors duration-300">
+            <div className="relative flex w-full flex-col max-w-[430px] h-full overflow-hidden shadow-xl bg-background-light dark:bg-background-dark transition-colors duration-300">
                 {/* Header - Sticky */}
-                <div className="shrink-0 z-40 w-full flex items-center bg-white/80 backdrop-blur-md p-4 justify-between border-b border-border-light">
-                    <button onClick={() => navigate(-1)} className="text-text-dark flex size-10 shrink-0 items-center justify-center bg-gray-100 rounded-full">
+                <div className="shrink-0 z-40 w-full flex items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md p-4 justify-between border-b border-border-light dark:border-white/10 transition-colors duration-300">
+                    <button onClick={() => navigate(-1)} className="text-text-dark dark:text-white flex size-10 shrink-0 items-center justify-center bg-gray-100 dark:bg-white/10 rounded-full hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
                         <span className="material-symbols-outlined">arrow_back_ios_new</span>
                     </button>
-                    <h2 className="text-text-dark text-lg font-bold leading-tight tracking-tight flex-1 text-center">Event Details</h2>
+                    <h2 className="text-text-dark dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">Event Details</h2>
                     <div className="flex w-10 items-center justify-end">
-                        <button onClick={handleShare} className="flex size-10 items-center justify-center rounded-full bg-gray-100 text-text-dark hover:bg-gray-200 transition-colors relative">
+                        <button onClick={handleShare} className="flex size-10 items-center justify-center rounded-full bg-gray-100 dark:bg-white/10 text-text-dark dark:text-white hover:bg-gray-200 dark:hover:bg-white/20 transition-colors relative">
                             <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>share</span>
                         </button>
                     </div>
@@ -211,20 +211,20 @@ const EventDetails = () => {
                         </div>
                     </div>
 
-                    <div className="relative -mt-10 z-10 bg-background-light rounded-t-[2.5rem] px-4 pt-8 pb-8">
-                        <h1 className="text-text-dark tracking-tight text-4xl font-extrabold leading-tight pb-6">{event.title}</h1>
+                    <div className="relative -mt-10 z-10 bg-background-light dark:bg-background-dark rounded-t-[2.5rem] px-4 pt-8 pb-8 transition-colors duration-300">
+                        <h1 className="text-text-dark dark:text-white tracking-tight text-4xl font-extrabold leading-tight pb-6">{event.title}</h1>
                         <div className="space-y-3">
                             <button
                                 onClick={handleAddToCalendar}
                                 disabled={event.isAnytime}
                                 className={`w-full text-left focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-2xl ${event.isAnytime ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <div className="flex items-center gap-4 bg-white px-4 min-h-[72px] py-2 rounded-2xl border border-border-light shadow-sm active:scale-[0.98] transition-all hover:border-primary/30">
-                                    <div className="text-primary flex items-center justify-center rounded-xl bg-accent-pink shrink-0 size-12">
+                                <div className="flex items-center gap-4 bg-white dark:bg-white/5 px-4 min-h-[72px] py-2 rounded-2xl border border-border-light dark:border-white/10 shadow-sm active:scale-[0.98] transition-all hover:border-primary/30">
+                                    <div className="text-primary flex items-center justify-center rounded-xl bg-accent-pink dark:bg-primary/20 shrink-0 size-12">
                                         <span className="material-symbols-outlined">calendar_today</span>
                                     </div>
                                     <div className="flex flex-col justify-center">
-                                        <p className="text-text-dark text-base font-bold leading-normal">{formatDate(event.dateTime, event.createdAt, event.isAnytime)}</p>
+                                        <p className="text-text-dark dark:text-white text-base font-bold leading-normal">{formatDate(event.dateTime, event.createdAt, event.isAnytime)}</p>
                                         {!event.isAnytime && (
                                             <p className="text-primary text-sm font-bold leading-normal flex items-center gap-1">
                                                 Add to calendar
@@ -239,12 +239,12 @@ const EventDetails = () => {
                                 onClick={handleOpenMaps}
                                 className="w-full text-left focus:outline-none focus:ring-2 focus:ring-sky-500/20 rounded-2xl"
                             >
-                                <div className="flex items-center gap-4 bg-white px-4 min-h-[72px] py-2 rounded-2xl border border-border-light shadow-sm active:scale-[0.98] transition-all hover:border-sky-200">
-                                    <div className="text-secondary-dark text-sky-500 flex items-center justify-center rounded-xl bg-sky-50 shrink-0 size-12">
+                                <div className="flex items-center gap-4 bg-white dark:bg-white/5 px-4 min-h-[72px] py-2 rounded-2xl border border-border-light dark:border-white/10 shadow-sm active:scale-[0.98] transition-all hover:border-sky-200">
+                                    <div className="text-secondary-dark text-sky-500 flex items-center justify-center rounded-xl bg-sky-50 dark:bg-sky-500/20 shrink-0 size-12">
                                         <span className="material-symbols-outlined">location_on</span>
                                     </div>
                                     <div className="flex flex-col justify-center">
-                                        <p className="text-text-dark text-base font-bold leading-normal max-w-[200px] truncate">{event.location?.name || 'Location TBD'}</p>
+                                        <p className="text-text-dark dark:text-white text-base font-bold leading-normal max-w-[200px] truncate">{event.location?.name || 'Location TBD'}</p>
                                         <p className="text-sky-500 text-sm font-bold leading-normal flex items-center gap-1">
                                             Open in Maps
                                             <span className="material-symbols-outlined text-sm">open_in_new</span>
@@ -254,8 +254,8 @@ const EventDetails = () => {
                             </button>
                         </div>
                         <div className="py-8">
-                            <h3 className="text-text-dark text-xl font-bold mb-3">About the event</h3>
-                            <p className="text-text-muted leading-relaxed">
+                            <h3 className="text-text-dark dark:text-white text-xl font-bold mb-3">About the event</h3>
+                            <p className="text-text-muted dark:text-white/70 leading-relaxed">
                                 {event.description || "No description provided."}
                             </p>
                         </div>
@@ -263,7 +263,7 @@ const EventDetails = () => {
                         {hasJoined ? (
                             <div className="py-2">
                                 <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-text-dark text-xl font-bold">Who's Joining</h3>
+                                    <h3 className="text-text-dark dark:text-white text-xl font-bold">Who's Joining</h3>
                                 </div>
                                 <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-4 px-4 pb-4">
                                     {attendeesData.map((attendee) => {
@@ -280,7 +280,7 @@ const EventDetails = () => {
                                                 onClick={() => navigate(`/profile/${attendee.uid}`)}
                                                 className="flex-none w-40 relative group cursor-pointer active:scale-95 transition-transform"
                                             >
-                                                <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden border border-border-light shadow-sm bg-white">
+                                                <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden border border-border-light dark:border-white/10 shadow-sm bg-white dark:bg-white/5">
                                                     <img className="w-full h-full object-cover" src={imageUrl} alt={attendee.name || 'User'} />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                                                     <div className="absolute bottom-3 left-3">
@@ -288,7 +288,7 @@ const EventDetails = () => {
                                                     </div>
                                                 </div>
                                                 {isMatch && (
-                                                    <button className="absolute -bottom-2 right-2 size-10 bg-primary rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                                                    <button className="absolute -bottom-2 right-2 size-10 bg-primary rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-background-dark">
                                                         <span className="material-symbols-outlined text-white text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>favorite</span>
                                                     </button>
                                                 )}
@@ -298,10 +298,10 @@ const EventDetails = () => {
                                 </div>
                             </div>
                         ) : (
-                            <div className="py-8 text-center bg-white rounded-2xl border border-border-light mb-4">
+                            <div className="py-8 text-center bg-white dark:bg-white/5 rounded-2xl border border-border-light dark:border-white/10 mb-4 transition-colors">
                                 <span className="material-symbols-outlined text-4xl text-primary mb-2">lock</span>
-                                <p className="text-text-dark font-bold">Join to see who's going!</p>
-                                <p className="text-text-muted text-sm px-8">Join this event to unlock the guest list and start matching.</p>
+                                <p className="text-text-dark dark:text-white font-bold">Join to see who's going!</p>
+                                <p className="text-text-muted dark:text-white/60 text-sm px-8">Join this event to unlock the guest list and start matching.</p>
                             </div>
                         )}
                     </div>
@@ -309,11 +309,11 @@ const EventDetails = () => {
 
                 {/* Footer Join Button - Sticky */}
                 {/* Footer Join/Leave Button - Sticky */}
-                <div className="shrink-0 w-full pt-4 pb-4 px-6 bg-background-light border-t border-border-light z-20 mb-[85px]">
+                <div className="shrink-0 w-full pt-4 pb-4 px-6 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-white/10 z-20 mb-[85px] transition-colors duration-300">
                     {hasJoined ? (
                         <button
                             onClick={handleLeaveEvent}
-                            className="w-full h-14 bg-red-50 text-red-500 border-2 border-red-100 hover:bg-red-100 text-lg font-extrabold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
+                            className="w-full h-14 bg-red-50 dark:bg-red-500/10 text-red-500 border-2 border-red-100 dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-500/20 text-lg font-extrabold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
                         >
                             <span className="material-symbols-outlined">cancel</span>
                             Leave Event

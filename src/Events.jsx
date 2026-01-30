@@ -88,31 +88,31 @@ const Events = () => {
     };
 
     return (
-        <div className="relative flex min-h-screen w-full flex-col max-w-[430px] mx-auto overflow-x-hidden shadow-xl pb-24 border-x border-border-light bg-white">
-            <header className="sticky top-0 z-50 glass-effect pt-4 px-4 pb-2 border-b border-border-light">
+        <div className="relative flex min-h-screen w-full flex-col max-w-[430px] mx-auto overflow-x-hidden shadow-xl pb-24 border-x border-border-light dark:border-white/10 bg-white dark:bg-background-dark transition-colors duration-300">
+            <header className="sticky top-0 z-50 glass-effect dark:bg-background-dark/80 pt-4 px-4 pb-2 border-b border-border-light dark:border-white/10 transition-colors duration-300">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                         <div className="size-10 bg-primary rounded-full flex items-center justify-center">
                             <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>favorite</span>
                         </div>
-                        <h2 className="text-text-main text-xl font-bold leading-tight tracking-tight">placeToDate</h2>
+                        <h2 className="text-text-main dark:text-white text-xl font-bold leading-tight tracking-tight">placeToDate</h2>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={() => navigate('/edit-event')} className="size-10 flex items-center justify-center rounded-full bg-accent-pastel hover:bg-pink-100 transition-colors border border-pink-100">
-                            <span className="material-symbols-outlined text-primary text-[24px]">add</span>
+                        <button onClick={() => navigate('/edit-event')} className="size-10 flex items-center justify-center rounded-full bg-accent-pastel dark:bg-white/10 hover:bg-pink-100 dark:hover:bg-white/20 transition-colors border border-pink-100 dark:border-white/10">
+                            <span className="material-symbols-outlined text-primary dark:text-white text-[24px]">add</span>
                         </button>
-                        <button onClick={() => navigate('/settings')} className="size-10 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-colors border border-border-light">
-                            <span className="material-symbols-outlined text-text-muted text-[24px]">tune</span>
+                        <button onClick={() => navigate('/settings')} className="size-10 flex items-center justify-center rounded-full bg-gray-50 dark:bg-white/10 hover:bg-gray-100 dark:hover:bg-white/20 transition-colors border border-border-light dark:border-white/10">
+                            <span className="material-symbols-outlined text-text-muted dark:text-white/60 text-[24px]">tune</span>
                         </button>
                     </div>
                 </div>
                 <div className="pb-2">
                     <label className="flex flex-col min-w-40 h-12 w-full">
-                        <div className="flex w-full flex-1 items-stretch rounded-full h-full bg-gray-50 border border-border-light overflow-hidden">
-                            <div className="text-text-muted flex items-center justify-center pl-4">
+                        <div className="flex w-full flex-1 items-stretch rounded-full h-full bg-gray-50 dark:bg-white/5 border border-border-light dark:border-white/10 overflow-hidden transition-colors">
+                            <div className="text-text-muted dark:text-white/40 flex items-center justify-center pl-4">
                                 <span className="material-symbols-outlined">search</span>
                             </div>
-                            <input className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-full text-text-main focus:outline-0 focus:ring-0 border-none bg-transparent h-full placeholder:text-text-muted/60 px-4 pl-2 text-base font-normal leading-normal" placeholder="Search social events..." />
+                            <input className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-full text-text-main dark:text-white focus:outline-0 focus:ring-0 border-none bg-transparent h-full placeholder:text-text-muted/60 dark:placeholder:text-white/30 px-4 pl-2 text-base font-normal leading-normal" placeholder="Search social events..." />
                         </div>
                     </label>
                 </div>
@@ -125,17 +125,17 @@ const Events = () => {
                             onClick={() => setSelectedFilter(filter.label)}
                             className={`flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full px-5 transition-all ${selectedFilter === filter.label
                                 ? 'bg-primary text-white shadow-sm scale-105 font-bold'
-                                : 'bg-white border border-border-light text-text-main font-medium hover:bg-gray-50'
+                                : 'bg-white dark:bg-white/5 border border-border-light dark:border-white/10 text-text-main dark:text-white font-medium hover:bg-gray-50 dark:hover:bg-white/10'
                                 }`}
                         >
-                            {filter.icon && <span className={`material-symbols-outlined text-sm ${selectedFilter === filter.label ? 'text-white' : 'text-text-muted'}`}>{filter.icon}</span>}
+                            {filter.icon && <span className={`material-symbols-outlined text-sm ${selectedFilter === filter.label ? 'text-white' : 'text-text-muted dark:text-white/60'}`}>{filter.icon}</span>}
                             <p className="text-sm">{filter.label}</p>
                         </button>
                     ))}
                 </div>
                 <div className="space-y-6 mb-[10px]">
                     {filteredEvents.length === 0 ? (
-                        <p className="text-text-muted text-center pt-8">No events found for this category.</p>
+                        <p className="text-text-muted dark:text-white/50 text-center pt-8">No events found for this category.</p>
                     ) : (
                         filteredEvents.map((event) => {
                             const isJoined = user && event.attendees && event.attendees.includes(user.uid);
@@ -143,7 +143,7 @@ const Events = () => {
                                 <div
                                     key={event.id}
                                     onClick={() => navigate(`/event-details/${event.id}`)}
-                                    className="group relative flex flex-col items-stretch justify-start rounded-xl bg-white border border-border-light overflow-hidden transition-all hover:border-primary/20 shadow-sm cursor-pointer"
+                                    className="group relative flex flex-col items-stretch justify-start rounded-xl bg-white dark:bg-white/5 border border-border-light dark:border-white/10 overflow-hidden transition-all hover:border-primary/20 dark:hover:border-primary/40 shadow-sm cursor-pointer"
                                 >
                                     <div className="relative w-full aspect-[16/9] overflow-hidden">
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10"></div>
@@ -175,18 +175,18 @@ const Events = () => {
                                     </div>
                                     <div className="flex flex-col p-5 gap-3">
                                         <div>
-                                            <p className="text-text-main text-xl font-bold leading-tight tracking-tight">{event.title}</p>
+                                            <p className="text-text-main dark:text-white text-xl font-bold leading-tight tracking-tight">{event.title}</p>
                                             <p className="text-primary text-sm font-semibold mt-1">
                                                 {event.attendees ? event.attendees.length : 0} people joining
                                             </p>
                                         </div>
                                         <div className="flex items-end justify-between">
                                             <div className="space-y-2">
-                                                <div className="flex items-center gap-2 text-text-muted">
+                                                <div className="flex items-center gap-2 text-text-muted dark:text-white/60">
                                                     <span className="material-symbols-outlined text-[18px]">calendar_today</span>
                                                     <p className="text-sm font-medium">{formatDate(event.dateTime, event.createdAt, event.isAnytime)}</p>
                                                 </div>
-                                                <div className="flex items-center gap-2 text-text-muted">
+                                                <div className="flex items-center gap-2 text-text-muted dark:text-white/60">
                                                     <span className="material-symbols-outlined text-[18px]">location_on</span>
                                                     <p className="text-sm font-medium max-w-[150px] truncate">{event.location?.name || 'Location TBD'}</p>
                                                 </div>

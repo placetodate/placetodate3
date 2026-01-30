@@ -23,7 +23,7 @@ const BottomNav = () => {
     };
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto bg-white border-t border-border-light px-6 pb-4 pt-4 flex items-center justify-between z-50">
+        <nav className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto bg-white dark:bg-background-dark border-t border-border-light dark:border-white/10 px-6 pb-4 pt-4 flex items-center justify-between z-50 transition-colors duration-300">
             <button
                 onClick={() => navigate('/events')}
                 className={`flex flex-col items-center gap-1 transition-colors ${isActive('/events') ? 'text-primary' : 'text-text-muted hover:text-text-main'}`}

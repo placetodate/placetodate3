@@ -57,5 +57,12 @@
 body {
   font-family: 'Plus Jakarta Sans', sans-serif;
   background-color: var(--color-background-soft);
+  color: var(--color-text-main);
   min-height: 100dvh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body {
+  background-color: var(--color-background-dark);
+  color: #ffffff;
 }
