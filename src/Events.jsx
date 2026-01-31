@@ -14,12 +14,17 @@ const Events = () => {
 
     const filters = [
         { id: 'all', label: 'All', icon: 'apps' },
-        { id: 'coffee', label: 'Coffee', icon: 'coffee' },
-        { id: 'hiking', label: 'Hiking', icon: 'hiking' },
-        { id: 'music', label: 'Music', icon: 'music_note' },
-        { id: 'dinner', label: 'Dinner', icon: 'restaurant' },
-        { id: 'drinks', label: 'Drinks', icon: 'local_bar' },
-        { id: 'art', label: 'Art', icon: 'theater_comedy' },
+        { id: 'party', label: 'Party', icon: 'celebration' },
+        { id: 'theater', label: 'Theater', icon: 'theater_comedy' },
+        { id: 'bar', label: 'Bar', icon: 'local_bar' },
+        { id: 'restaurant', label: 'Restaurant', icon: 'restaurant' },
+        { id: 'coffee_shop', label: 'Coffee Shop', icon: 'coffee' },
+        { id: 'picnic', label: 'Picnic', icon: 'deck' },
+        { id: 'place', label: 'Place', icon: 'place' },
+        { id: 'course', label: 'Course', icon: 'school' },
+        { id: 'gym', label: 'Gym', icon: 'fitness_center' },
+        { id: 'shop', label: 'Shop', icon: 'shopping_bag' },
+        { id: 'rally', label: 'Rally', icon: 'campaign' },
     ];
 
     useEffect(() => {

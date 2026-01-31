@@ -32,6 +32,12 @@ const EditProfile = () => {
     const [isDirty, setIsDirty] = useState(false);
     const [uploadingSlot, setUploadingSlot] = useState(null);
 
+    // Image Adjustment State
+    const [croppingFile, setCroppingFile] = useState(null);
+    const [croppingSlot, setCroppingSlot] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
+    const [tempPosition, setTempPosition] = useState({ x: 50, y: 50 });
+
     // Form State
     const [name, setName] = useState('');
     const [gender, setGender] = useState('female');
@@ -55,6 +61,9 @@ const EditProfile = () => {
     const [currentImageSlot, setCurrentImageSlot] = useState(null);
     const [draggingSlot, setDraggingSlot] = useState(null);
     const dragStartRef = useRef({ x: 0, y: 0 });
+    // Ref for drag within the modal
+    const modalDragStartRef = useRef({ x: 0, y: 0 });
+    const [isDraggingModal, setIsDraggingModal] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -113,29 +122,98 @@ const EditProfile = () => {
         fileInputRef.current.click();
     };
 
-    const handleImageUpload = async (e) => {
+    const handleImageUpload = (e) => {
         const file = e.target.files[0];
         if (!file || currentImageSlot === null || !user) return;
 
-        setUploadingSlot(currentImageSlot);
+        // Create preview URL
+        const objectUrl = URL.createObjectURL(file);
+        setPreviewUrl(objectUrl);
+        setCroppingFile(file);
+        setCroppingSlot(currentImageSlot);
+        setTempPosition({ x: 50, y: 50 });
+
+        // Clear input so same file can be selected again if cancelled
+        e.target.value = null;
+    };
+
+    const handleConfirmUpload = async () => {
+        if (!croppingFile || croppingSlot === null || !user) return;
+
+        setUploadingSlot(croppingSlot);
+        // Clean up preview
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        // Clear modal state so we see the spinner on the slot
+        setCroppingFile(null);
+        setPreviewUrl(null);
+
         try {
-            const resizedDataUrl = await resizeImage(file);
+            const resizedDataUrl = await resizeImage(croppingFile);
             const blob = await (await fetch(resizedDataUrl)).blob();
 
-            const storageRef = ref(storage, `profile_images/${user.uid}/${Date.now()}_${file.name}`);
+            const storageRef = ref(storage, `profile_images/${user.uid}/${Date.now()}_${croppingFile.name}`);
             const snapshot = await uploadBytes(storageRef, blob);
             const downloadURL = await getDownloadURL(snapshot.ref);
 
             const newImages = [...images];
-            newImages[currentImageSlot] = downloadURL;
+            newImages[croppingSlot] = downloadURL;
             setImages(newImages);
+
+            const newPositions = [...imagePositions];
+            newPositions[croppingSlot] = tempPosition;
+            setImagePositions(newPositions);
+
         } catch (error) {
             console.error("Error uploading image:", error);
             setError("Failed to upload image. Please try again.");
         } finally {
             setUploadingSlot(null);
-            e.target.value = null; // Reset input
+            setCroppingSlot(null);
         }
+    };
+
+    const handleCancelUpload = () => {
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setCroppingFile(null);
+        setCroppingSlot(null);
+        setPreviewUrl(null);
+        setTempPosition({ x: 50, y: 50 });
+    };
+
+    // Modal Drag Handlers
+    const handleModalMouseDown = (e) => {
+        e.preventDefault();
+        setIsDraggingModal(true);
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        modalDragStartRef.current = { x: clientX, y: clientY };
+    };
+
+    const handleModalMouseMove = (e) => {
+        if (!isDraggingModal) return;
+        e.preventDefault();
+
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const deltaX = clientX - modalDragStartRef.current.x;
+        const deltaY = clientY - modalDragStartRef.current.y;
+
+        const sensitivity = 0.2;
+
+        const newX = tempPosition.x - (deltaX * sensitivity);
+        const newY = tempPosition.y - (deltaY * sensitivity);
+
+        setTempPosition({
+            x: Math.max(0, Math.min(100, newX)),
+            y: Math.max(0, Math.min(100, newY))
+        });
+
+        modalDragStartRef.current = { x: clientX, y: clientY };
+    };
+
+    const handleModalMouseUp = () => {
+        setIsDraggingModal(false);
     };
 
     const handleShuffleAvatar = () => {
@@ -184,74 +262,64 @@ const EditProfile = () => {
 
     const handleRemoveImage = (index, e) => {
         e.stopPropagation();
-        const newImages = [...images];
-        newImages[index] = null;
-        setImages(newImages);
 
-        // Reset position for this slot
+        const newImages = [...images];
         const newPositions = [...imagePositions];
-        newPositions[index] = { x: 50, y: 50 };
+
+        // Remove the image and its position at the specific index
+        newImages.splice(index, 1);
+        newPositions.splice(index, 1);
+
+        // Pad arrays back to length 6
+        while (newImages.length < 6) {
+            newImages.push(null);
+            newPositions.push({ x: 50, y: 50 });
+        }
+
+        setImages(newImages);
         setImagePositions(newPositions);
     };
 
-    const handleMouseDown = (index, e) => {
-        if (!images[index]) return; // Can't drag empty slot
-        e.preventDefault(); // Prevent default drag behavior
-        setDraggingSlot(index);
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        dragStartRef.current = { x: clientX, y: clientY };
+    const moveImage = (index, direction, e) => {
+        e.stopPropagation();
+        const targetIndex = index + direction;
+
+        // Check bounds
+        if (targetIndex < 0 || targetIndex >= images.length) return;
+
+        const newImages = [...images];
+        const newPositions = [...imagePositions];
+
+        // Swap images
+        const tempImage = newImages[index];
+        newImages[index] = newImages[targetIndex];
+        newImages[targetIndex] = tempImage;
+
+        // Swap positions
+        const tempPos = newPositions[index];
+        newPositions[index] = newPositions[targetIndex];
+        newPositions[targetIndex] = tempPos;
+
+        setImages(newImages);
+        setImagePositions(newPositions);
     };
 
-    const handleMouseMove = (e) => {
-        if (draggingSlot === null) return;
-        e.preventDefault(); // Prevent scrolling on touch
-
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-        const deltaX = clientX - dragStartRef.current.x;
-        const deltaY = clientY - dragStartRef.current.y;
-
-        const sensitivity = 0.2;
-
-        setImagePositions(prev => {
-            const newPositions = [...prev];
-            const currentPos = newPositions[draggingSlot];
-
-            let newX = currentPos.x - (deltaX * sensitivity);
-            let newY = currentPos.y - (deltaY * sensitivity);
-
-            newX = Math.max(0, Math.min(100, newX));
-            newY = Math.max(0, Math.min(100, newY));
-
-            newPositions[draggingSlot] = { x: newX, y: newY };
-            return newPositions;
-        });
-
-        dragStartRef.current = { x: clientX, y: clientY };
-    };
-
-    const handleMouseUp = () => {
-        setDraggingSlot(null);
-    };
-
-    // Add global event listeners for drag handling
+    // Add global event listeners for modal drag handling
     useEffect(() => {
-        if (draggingSlot !== null) {
-            window.addEventListener('mousemove', handleMouseMove, { passive: false });
-            window.addEventListener('mouseup', handleMouseUp);
-            window.addEventListener('touchmove', handleMouseMove, { passive: false });
-            window.addEventListener('touchend', handleMouseUp);
+        if (isDraggingModal) {
+            window.addEventListener('mousemove', handleModalMouseMove, { passive: false });
+            window.addEventListener('mouseup', handleModalMouseUp);
+            window.addEventListener('touchmove', handleModalMouseMove, { passive: false });
+            window.addEventListener('touchend', handleModalMouseUp);
         }
 
         return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
-            window.removeEventListener('touchmove', handleMouseMove);
-            window.removeEventListener('touchend', handleMouseUp);
+            window.removeEventListener('mousemove', handleModalMouseMove);
+            window.removeEventListener('mouseup', handleModalMouseUp);
+            window.removeEventListener('touchmove', handleModalMouseMove);
+            window.removeEventListener('touchend', handleModalMouseUp);
         };
-    }, [draggingSlot]);
+    }, [isDraggingModal]);
 
     const validateForm = () => {
         const errors = {};
@@ -357,32 +425,12 @@ const EditProfile = () => {
                                 {images.map((img, i) => (
                                     <div
                                         key={i}
-                                        onMouseDown={(e) => {
-                                            if (uploadingSlot === i) {
-                                                e.preventDefault();
-                                                return;
-                                            }
-                                            if (images[i]) {
-                                                e.stopPropagation();
-                                                handleMouseDown(i, e);
-                                            }
-                                        }}
-                                        onTouchStart={(e) => {
-                                            if (uploadingSlot === i) {
-                                                e.preventDefault();
-                                                return;
-                                            }
-                                            if (images[i]) {
-                                                e.stopPropagation();
-                                                handleMouseDown(i, e);
-                                            }
-                                        }}
                                         onClick={() => {
                                             if (uploadingSlot === i) return;
                                             !images[i] && handleImageClick(i);
                                         }}
-                                        className={`relative aspect-[3/4] rounded-2xl border-2 bg-cover bg-no-repeat shadow-sm transition-all touch-none ${img
-                                            ? `overflow-hidden border-primary/20 ${draggingSlot === i ? 'cursor-grabbing' : 'cursor-grab'}`
+                                        className={`relative aspect-[3/4] rounded-2xl border-2 bg-cover bg-no-repeat shadow-sm transition-all overflow-hidden ${img
+                                            ? 'border-primary/20'
                                             : 'border-dashed border-light-gray bg-white hover:border-primary/40 hover:bg-accent-pink/30 flex items-center justify-center group cursor-pointer'
                                             }`}
                                         style={img ? {
@@ -398,17 +446,45 @@ const EditProfile = () => {
                                             <>
                                                 <button
                                                     onClick={(e) => handleRemoveImage(i, e)}
-                                                    onMouseDown={(e) => e.stopPropagation()} // Prevent drag start
-                                                    onTouchStart={(e) => e.stopPropagation()}
                                                     className="absolute top-1 right-1 size-6 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors z-10"
                                                 >
                                                     <span className="material-symbols-outlined text-sm">close</span>
                                                 </button>
-                                                <div className="absolute bottom-2 right-2 size-8 bg-primary text-white rounded-full flex items-center justify-center shadow-lg pointer-events-none">
-                                                    <span className="material-symbols-outlined text-sm">edit</span>
-                                                </div>
-                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
-                                                    <span className="bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">Drag to adjust</span>
+
+                                                {/* Reorder Arrows */}
+                                                <div className="absolute bottom-0 inset-x-0 h-8 bg-black/40 backdrop-blur-sm flex items-center justify-between px-2">
+                                                    {(i > 0) && (
+                                                        <button
+                                                            onClick={(e) => moveImage(i, -1, e)}
+                                                            className="text-white hover:text-primary transition-colors"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">arrow_back</span>
+                                                        </button>
+                                                    )}
+
+                                                    {/* Spacer if first item to keep edit centered if we wanted, or just flex-between implies separation */}
+                                                    {i === 0 && <div className="w-5"></div>}
+
+                                                    <div
+                                                        onClick={() => {
+                                                            setCurrentImageSlot(i);
+                                                            fileInputRef.current.click();
+                                                        }}
+                                                        className="size-6 bg-primary text-white rounded-full flex items-center justify-center shadow-sm cursor-pointer hover:bg-primary-dark"
+                                                    >
+                                                        <span className="material-symbols-outlined text-xs">edit</span>
+                                                    </div>
+
+                                                    {(i < 5 && images[i + 1]) && (
+                                                        <button
+                                                            onClick={(e) => moveImage(i, 1, e)}
+                                                            className="text-white hover:text-primary transition-colors"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                                                        </button>
+                                                    )}
+                                                    {/* Spacer if last item */}
+                                                    {!(i < 5 && images[i + 1]) && <div className="w-5"></div>}
                                                 </div>
                                             </>
                                         ) : (
@@ -685,6 +761,62 @@ const EditProfile = () => {
                         )}
                     </button>
                 </div>
+
+                {/* Image Adjustment Modal */}
+                {croppingFile && previewUrl && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <div className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col items-center animate-in zoom-in duration-200">
+                            <h3 className="text-xl font-bold text-text-dark mb-4">Adjust Photo</h3>
+                            <p className="text-sm text-medium-gray mb-6 text-center">Drag the image to adjust position</p>
+
+                            <div
+                                className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden cursor-move border-2 border-primary/20 shadow-inner mb-6"
+                                onMouseDown={handleModalMouseDown}
+                                onTouchStart={handleModalMouseDown}
+                                onMouseMove={handleModalMouseMove}
+                                onTouchMove={handleModalMouseMove}
+                                onMouseUp={handleModalMouseUp}
+                                onMouseLeave={handleModalMouseUp}
+                                onTouchEnd={handleModalMouseUp}
+                            >
+                                <div
+                                    className="absolute inset-0 bg-cover bg-no-repeat"
+                                    style={{
+                                        backgroundImage: `url('${previewUrl}')`,
+                                        backgroundPosition: `${tempPosition.x}% ${tempPosition.y}%`
+                                    }}
+                                ></div>
+                                {/* Grid/Guides Overlay */}
+                                <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-50">
+                                    <div className="border-r-2 border-b-2 border-white/80"></div>
+                                    <div className="border-r-2 border-b-2 border-white/80"></div>
+                                    <div className="border-b-2 border-white/80"></div>
+                                    <div className="border-r-2 border-b-2 border-white/80"></div>
+                                    <div className="border-r-2 border-b-2 border-white/80"></div>
+                                    <div className="border-b-2 border-white/80"></div>
+                                    <div className="border-r-2 border-white/80"></div>
+                                    <div className="border-r-2 border-white/80"></div>
+                                    <div></div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 w-full">
+                                <button
+                                    onClick={handleCancelUpload}
+                                    className="w-full py-3 bg-gray-100 text-text-dark font-bold rounded-2xl active:scale-[0.98] transition-all hover:bg-gray-200"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleConfirmUpload}
+                                    className="w-full py-3 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all hover:bg-primary-dark"
+                                >
+                                    Save Photo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

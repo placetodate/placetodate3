@@ -13,7 +13,7 @@ const EditEvent = () => {
     const { id } = useParams();
     const isEditMode = !!id;
 
-    const [selectedEventType, setSelectedEventType] = useState('Coffee');
+    const [selectedEventType, setSelectedEventType] = useState('Party');
     const [isPrivate, setIsPrivate] = useState(false);
     const [isAnytime, setIsAnytime] = useState(false);
     const [eventImage, setEventImage] = useState('https://lh3.googleusercontent.com/aida-public/AB6AXuB9WS9r2B6wLD0voVQ4UFtwvmx9cRI71kJG4XCF8q0fyRkt9K9KNFBdTxflBpaco9wVeqwjXIvzRGZ-W76LgACrzHpqhTx2O6nLa5tgYlYwUMao-1_yjVgsKRn0bRp9xvfGEXp5M03pzayVBQ9aRBdQ65O8xnhFb4UD_i0Tpe6v6VLeRyJW-97yqPDKCnhUNHCc8-nJvoiIWjFItFTvqga1h0S6Fy9cjL2nI_xs5yKAOl81fkZIEaW3ZAQ8_ZtKeRmt_8N9ZWg1lxM');
@@ -259,13 +259,49 @@ const EditEvent = () => {
     };
 
     const eventTypes = [
-        { id: 'coffee', label: 'Coffee', icon: 'coffee' },
-        { id: 'hiking', label: 'Hiking', icon: 'hiking' },
-        { id: 'music', label: 'Music', icon: 'music_note' },
-        { id: 'dinner', label: 'Dinner', icon: 'restaurant' },
-        { id: 'drinks', label: 'Drinks', icon: 'local_bar' },
-        { id: 'art', label: 'Art', icon: 'theater_comedy' },
+        { id: 'party', label: 'Party', icon: 'celebration' },
+        { id: 'theater', label: 'Theater', icon: 'theater_comedy' },
+        { id: 'bar', label: 'Bar', icon: 'local_bar' },
+        { id: 'restaurant', label: 'Restaurant', icon: 'restaurant' },
+        { id: 'coffee_shop', label: 'Coffee Shop', icon: 'coffee' },
+        { id: 'picnic', label: 'Picnic', icon: 'deck' },
+        { id: 'place', label: 'Place', icon: 'place' },
+        { id: 'course', label: 'Course', icon: 'school' },
+        { id: 'gym', label: 'Gym', icon: 'fitness_center' },
+        { id: 'shop', label: 'Shop', icon: 'shopping_bag' },
+        { id: 'rally', label: 'Rally', icon: 'campaign' },
     ];
+
+    const DEFAULT_EVENT_IMAGES = {
+        'Party': 'https://images.unsplash.com/photo-1514525253440-b393452eeb25?w=500&h=800&fit=crop',
+        'Theater': 'https://images.unsplash.com/photo-1478720568477-152d9b164e63?w=500&h=800&fit=crop',
+        'Bar': 'https://images.unsplash.com/photo-1575037644864-16b74f25b29b?w=500&h=800&fit=crop',
+        'Restaurant': 'https://images.unsplash.com/photo-1559335406-1387e8a15695?w=500&h=800&fit=crop',
+        'Coffee Shop': 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=500&h=800&fit=crop',
+        'Picnic': 'https://images.unsplash.com/photo-1566324422207-6ff52243d63d?w=500&h=800&fit=crop',
+        'Place': 'https://images.unsplash.com/photo-1604351860613-2d2508779434?w=500&h=800&fit=crop',
+        'Course': 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=500&h=800&fit=crop',
+        'Gym': 'https://images.unsplash.com/photo-1517836357463-c25dfe4b2867?w=500&h=800&fit=crop',
+        'Shop': 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=500&h=800&fit=crop',
+        'Rally': 'https://images.unsplash.com/photo-1562322144883-9b9c9d0b8d5a?w=500&h=800&fit=crop',
+    };
+
+    // Helper to check if current image is a default one
+    const isDefaultImage = (url) => {
+        if (!url) return true;
+        if (url.includes('googleusercontent.com')) return true; // Old default
+        return Object.values(DEFAULT_EVENT_IMAGES).some(defaultUrl => url === defaultUrl);
+    };
+
+    useEffect(() => {
+        // When event type changes, if we are using a default image, update it to the new type's default
+        if (isDefaultImage(eventImage)) {
+            const newDefault = DEFAULT_EVENT_IMAGES[selectedEventType];
+            if (newDefault) {
+                setEventImage(newDefault);
+            }
+        }
+    }, [selectedEventType]);
 
 
     return (
